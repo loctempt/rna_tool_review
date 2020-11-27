@@ -239,7 +239,9 @@ for dir in dirList:
     # pymol 删除不可用的口袋 (手动处理后放至文件夹：flex_site-> input)
     print('请将候选口袋初步判断后，将候选口袋移至flex_site/input文件夹，进行下一步')
     os.system('pause')
-
+    # =========================
+    # 鉴定柔性
+    # ========================
     # 读文件构造pdb对象
     # set()存各个现存的氨基酸编号  遍历上一步的dict中取通用口袋
     # 计算rmsd值 每一个氨基酸区分和不区分 sidechain 和 backbone分别对原子计算
@@ -262,8 +264,8 @@ for dir in dirList:
                 # else:
                 specified_sele_pkt_dict[str(
                     rgh_file[:5])] = cur_PDB.macro_molecule.get_chain(rgh_file[4])
+                    
     pkt_resSeq = set()
-
     for key, value in specified_sele_pkt_dict.items():
         for macro_aa in value.get_complete_aa():
             pkt_resSeq.add(macro_aa.atom_list[0].get_resSeq())
@@ -295,10 +297,10 @@ for dir in dirList:
 
                 if rmsd >= max_rmsd_pkt[value[0][cur_aa_no].atom_list[0].get_resSeq()]:
                     max_rmsd_pkt[cur_resSeq] = rmsd
-                max_pkt[cur_resSeq] = temp_aa
+                    max_pkt[cur_resSeq] = temp_aa
     # 删除max_pkt中为None的aa记录
     for key in list(max_pkt.keys()):
-        if not max_pkt[key]:
+        if max_pkt[key] is None:
             del max_pkt[key]
             del max_rmsd_pkt[key]
 
