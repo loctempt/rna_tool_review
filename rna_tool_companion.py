@@ -176,13 +176,16 @@ for dir in dirList:
     print('下一步：蛋白叠合，请移至服务器完成')
     os.system('pause')
 
+    # =========================
+    # 计算口袋
+    # =========================
     # 读文件构造pdb对象
     # 计算与各个小分子距离在5埃内的分子  构造大小分子dict{key,[macro,micro]}
     #  没有小分子的直接输出一个大分子即可 大小分子间加TER
-    surimposefileList = os.listdir(filePath+'\\superimpose\\input')
+    superimposefileList = os.listdir(filePath+'\\superimpose\\input')
     # rough_sele_pr_dict.clear()
     rough_sele_pr_dict = {}
-    for surfile in surimposefileList:
+    for surfile in superimposefileList:
         print(surfile)
         with open(filePath+'\\superimpose\\input\\'+surfile, 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
@@ -197,35 +200,41 @@ for dir in dirList:
     ligand_cnt = 0
     tmp_key = 0
     for key, value in rough_sele_pr_dict.items():
+        macro_chain = value[0]
+        micro_chain = value[1] if len(value) == 2 else None
         if len(value) == 1:
-            specified_sele_pkt_dict[key] = [value[0]]
+            specified_sele_pkt_dict[key] = [macro_chain]
         else:
+            # 对每种key单独编号
             if tmp_key != key:
                 tmp_key = key
                 ligand_cnt = 0
-            for micro_aa in value[1].get_complete_aa():
+            for micro_aa in micro_chain.get_complete_aa():
                 tmp_pkt_list = []
-                for macro_aa in value[0].get_complete_aa():
-                    flag = dist_cutoff_cal(
+                for macro_aa in macro_chain.get_complete_aa():
+                    dist_cutoff = dist_cutoff_cal(
                         macro_aa.get_complete_atom(), micro_aa.get_complete_atom(), 5)
-                    if flag == 0:
+                    if dist_cutoff == 0:
                         continue
+                    # 记录落入口袋半径的氨基酸
                     tmp_pkt_list.append(macro_aa)
                 specified_sele_pkt_dict[key+'_' +
                                         str(ligand_cnt)] = [tmp_pkt_list, micro_aa]
                 ligand_cnt += 1
 
     for key, value in specified_sele_pkt_dict.items():
-        print(key)
+       macro_chain = value[0]
+       micro_chain = value[1] if len(value) == 2 else None
+       print(key)
         with open(filePath+'\\superimpose\\output\\'+key+'.pdb', 'w')as outFile:
             if len(value) == 1:
-                outFile.writelines(str(value[0]))
+                outFile.writelines(str(macro_chain))
             else:
-                for i in value[0]:
+                for i in macro_chain:
                     outFile.writelines(str(i))
                     outFile.write('\n')
                 outFile.write('TER\n')
-                outFile.write(str(value[1]))
+                outFile.write(str(micro_chain))
 
     # pymol 删除不可用的口袋 (手动处理后放至文件夹：flex_site-> input)
     print('请将候选口袋初步判断后，将候选口袋移至flex_site/input文件夹，进行下一步')
