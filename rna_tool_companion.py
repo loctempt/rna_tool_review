@@ -160,13 +160,17 @@ for dir in dirList:
         #     for i in macro_chain.mutation_cal(tp, mth, mthList):
         #         mutfile.write(str(i))
 
+    # =========================
     # 输出编号归一的pdb (输出时大小分子间要插入TER)
+    # =========================
     for key, value in rough_sele_pr_dict.items():
+        macro_chain = value[0]
+        micro_chain = value[1] if len(value) == 2 else None
         with open(filePath+'\\pre_dealing\\'+key+'.pdb', 'w') as outFile:
-            outFile.writelines(str(value[0]))
+            outFile.writelines(str(macro_chain))
             outFile.write('\nTER\n')
             if len(value) > 1:
-                outFile.writelines(str(value[1]))
+                outFile.writelines(str(micro_chain))
 
     # 叠合
     print('下一步：蛋白叠合，请移至服务器完成')
