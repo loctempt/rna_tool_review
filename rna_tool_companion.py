@@ -3,18 +3,21 @@ import os
 import math
 
 def dist_cutoff_cal(micro_atom_list,macro_atom_list,cutoff):
-    tom_cnt=0
-    for mi_tom in micro_atom_list:
-        if not mi_tom.element_compare('H'):
+    """
+    计算micro_atom_list链条中，与macro_atom_list链条最小距离不大于cutoff的micro_atom总数
+    """
+    atom_cnt=0
+    for micro_atom in micro_atom_list:
+        if not micro_atom.element_compare('H'):
             continue
-        for ma_tom in macro_atom_list:
-            if not ma_tom.element_compare('H'):
+        for macro_atom in macro_atom_list:
+            if not macro_atom.element_compare('H'):
                 continue
-            if math.sqrt(mi_tom.atom_dist_2(ma_tom))>cutoff:
+            if math.sqrt(micro_atom.atom_dist_2(macro_atom))>cutoff:
                 continue
-            tom_cnt+=1
+            atom_cnt+=1
             break
-    return tom_cnt      
+    return atom_cnt      
 
 def input_legalization(marked_words,legal_num,case_status):
     flag=True
@@ -56,6 +59,8 @@ for dir in dirList:
                         for atom in aa.get_complete_atom():
                             if not atom.element_compare('C'):
                                 carbon_cnt+=1   
+                        if carbon_cnt < 3:
+                            continue
                         min_dist=float('inf')
                         macro_chain=cur_PDB.macro_molecule.get_chain(chain.get_chainID())
                         for macro_aa in macro_chain.get_complete_aa():
@@ -79,15 +84,17 @@ for dir in dirList:
     clsrNum=input("plz input "+dir+" template class ID:")
     templateID=input_legalization("template PDB+Chain ID(as 2OF2A):",5,str.isupper)
     with open(filePath+'\\序列聚类\\outRes.clstr','r') as clsrFile:
-        flag=False
+        clsrnum_found=False
         maxchainlen=-1
         for line in clsrFile.readlines():
             line=line.split()
             if line[0]=='>Cluster' and line[1]==str(clsrNum):
-                flag=True
+                clsrnum_found=True
+                # 跳过目标段落第一行
                 continue
-            if flag:
+            if clsrnum_found:
                 if line[0]=='>Cluster':
+                    # 来到下一段落，结束循环
                     break
                 curPdb=line[2][1:5]
                 curChainID=line[2][6]
@@ -103,17 +110,19 @@ for dir in dirList:
     
     # 将小于0.55长度的链都删去
     # 并在剩余的rough_dict中筛选合适的小分子 距离小于5 60%
+    # 筛选合适的肽链以及小分子
     tmp_dict={}
     for key,value in rough_sele_pr_dict.items():
-        if float(len(value[0].get_complete_aa())/maxchainlen)>0:
+        macro_chain = value[0]
+        micro_chain = value[1] if len(value) == 2 else None
+        if float(len(macro_chain.get_complete_aa()))/maxchainlen>0.5:
             if len(value)==1:
                 tmp_dict[key]=value
                 continue
-            for rough_micro_mol in value[1].get_complete_aa():
-                one_Mol_total_cutoff=dist_cutoff_cal(rough_micro_mol.get_complete_atom(),value[0].get_complete_atom(),5)
-                if float(one_Mol_total_cutoff/
-                        len(rough_micro_mol.get_complete_atom()))<0.6:
-                        value[1].aa_List.remove(rough_micro_mol)
+            for rough_micro_mol in micro_chain.get_complete_aa():
+                one_Mol_total_cutoff=dist_cutoff_cal(rough_micro_mol.get_complete_atom(),macro_chain.get_complete_atom(),5)
+                if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom())<0.6:
+                    micro_chain.aa_List.remove(rough_micro_mol)
             tmp_dict[key]=value
     rough_sele_pr_dict=tmp_dict
 
