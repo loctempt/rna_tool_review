@@ -212,7 +212,11 @@ class Chain:
         return ret
 
     def pdb_2_fasta(self):
-        # pdb链转换为fasta
+        """
+        pdb链转换为fasta
+        """
+        if len(self.aa_fasta_list) == len(self.aa_List):
+            return
         aa_codes = {
             'ALA': 'A', 'CYS': 'C', 'SEP': 'B', 'ASP': 'D', 'GLU': 'E',
             'PHE': 'F', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I', 'PTR': 'J',
@@ -224,8 +228,6 @@ class Chain:
             if cur_aa.atom_list[0].get_atom() == 'HETATM':
                 self.aa_fasta_list.append('X')
             else:
-                if len(self.aa_fasta_list) == len(self.aa_List):
-                    return
                 self.aa_fasta_list.append(
                     aa_codes[cur_aa.get_molecule_resName()])
 
@@ -234,6 +236,7 @@ class Chain:
         self：比对链 another：模板链
         needlman wunsch
         '''
+        # TODO: 待查，双人查
         p = 1
         q = 1
         # 初始化 列：mthseq 行：tpseq
@@ -333,16 +336,17 @@ class Chain:
                 tpList.append(tpltIdx)
                 tpltIdx += 1
 
-        firstIdx = 0
-        while firstIdx < len(mth):
-            if mth[firstIdx] == tp[firstIdx]:
+        # 找到第一个两两配对的位置
+        first_pairing_position = 0
+        while first_pairing_position < len(mth):
+            if mth[first_pairing_position] == tp[first_pairing_position]:
                 break
-            firstIdx += 1
+            first_pairing_position += 1
 
-        for forwardPointer in range(firstIdx, len(mth)):
+        for forwardPointer in range(first_pairing_position, len(mth)):
             mthList.append(tpList[forwardPointer])
-        for backwardPointer in range(firstIdx-1, -1, -1):
-            mthList.insert(0, backwardPointer-firstIdx+tpList[firstIdx])
+        for backwardPointer in range(first_pairing_position-1, -1, -1):
+            mthList.insert(0, backwardPointer-first_pairing_position+tpList[first_pairing_position])
 
         # 更新chain中各氨基酸的resseq
         amino_acid_cnt = 0
@@ -357,6 +361,7 @@ class Chain:
     def mutation_cal(self, tp, mth, mthList):
         mut_list = []
         print('mth:', len(mth), 'tp:', len(tp), 'mthList:', len(mthList))
+        # CHECK len(tp) <= len(mth) ?
         for i in range(len(mth)):
             if mth[i] == '-' or tp[i] == '-':
                 continue

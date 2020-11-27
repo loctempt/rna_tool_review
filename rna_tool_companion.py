@@ -138,24 +138,27 @@ for dir in dirList:
     rough_sele_pr_dict = tmp_dict
 
     # 输出单链文件 检查小分子和肽链 当前筛选的结果是否合适 属于中间结果 可删
-    for key, value in rough_sele_pr_dict.items():
-        with open(filePath+'\\output\\'+key+'.pdb', 'w') as outFile:
-            outFile.writelines(str(value[0]))
-            outFile.write('\nTER\n')
-            if len(value) > 1:
-                outFile.writelines(str(value[1]))
+    # for key, value in rough_sele_pr_dict.items():
+    #     with open(filePath+'\\output\\'+key+'.pdb', 'w') as outFile:
+    #         outFile.writelines(str(value[0]))
+    #         outFile.write('\nTER\n')
+    #         if len(value) > 1:
+    #             outFile.writelines(str(value[1]))
 
+    # =========================
     # 序列叠合编号 鉴定突变位点
+    # =========================
     template_chain = rough_sele_pr_dict[templateID][0]
     template_chain.pdb_2_fasta()
     for key, value in rough_sele_pr_dict.items():
-        value[0].pdb_2_fasta()
-        mth, tp = value[0].sequence_match(template_chain)
-        mthList = value[0].res_seq_edit(mth, tp)
-        # 找突变点
-        with open(filePath+'\\mutations\\'+key+'.txt', 'w') as mutfile:
-            for i in value[0].mutation_cal(tp, mth, mthList):
-                mutfile.write(str(i))
+        macro_chain = value[0]
+        macro_chain.pdb_2_fasta()
+        mth, tp = macro_chain.sequence_match(template_chain)
+        mthList = macro_chain.res_seq_edit(mth, tp)
+        # 找突变点, 暂时未用上
+        # with open(filePath+'\\mutations\\'+key+'.txt', 'w') as mutfile:
+        #     for i in macro_chain.mutation_cal(tp, mth, mthList):
+        #         mutfile.write(str(i))
 
     # 输出编号归一的pdb (输出时大小分子间要插入TER)
     for key, value in rough_sele_pr_dict.items():
