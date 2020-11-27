@@ -223,9 +223,9 @@ for dir in dirList:
                 ligand_cnt += 1
 
     for key, value in specified_sele_pkt_dict.items():
-       macro_chain = value[0]
-       micro_chain = value[1] if len(value) == 2 else None
-       print(key)
+        macro_chain = value[0]
+        micro_chain = value[1] if len(value) == 2 else None
+        print(key)
         with open(filePath+'\\superimpose\\output\\'+key+'.pdb', 'w')as outFile:
             if len(value) == 1:
                 outFile.writelines(str(macro_chain))
