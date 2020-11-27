@@ -82,7 +82,9 @@ for dir in dirList:
                     # 引用不传递！！！！！
             PDB_dict[str(file)[:4]] = cur_PDB
 
+    # =========================
     # 功能：读outRes.clsr文件
+    # =========================
     # 输出pdb链
     rough_sele_pr_dict = {}
     clsrNum = input("plz input "+dir+" template class ID:")
@@ -114,9 +116,11 @@ for dir in dirList:
                 else:
                     rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
 
+    # =========================
+    # 筛选合适的肽链以及小分子
+    # =========================
     # 将小于0.55长度的链都删去
     # 并在剩余的rough_dict中筛选合适的小分子 距离小于5 60%
-    # 筛选合适的肽链以及小分子
     tmp_dict = {}
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
