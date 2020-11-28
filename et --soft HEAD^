@@ -1,0 +1,64 @@
+[33mcommit 0ea2ddf83e6e1409eeabeba30d6eba4cc6db2aed[m[33m ([m[1;36mHEAD -> [m[1;32mcode_review[m[33m, [m[1;31morigin/code_review[m[33m)[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 23:38:25 2020 +0800
+
+    修正一处错误缩进
+
+[33mcommit b8c0078262fd812308ce43a326460402ce57f497[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 23:26:20 2020 +0800
+
+    鉴定柔性修改及优化
+
+[33mcommit 5fc9676ede3bb79079d5306ae4b3ed3c944dc3a2[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 17:02:41 2020 +0800
+
+    计算口袋优化
+
+[33mcommit 1ac913775221852472437be9266b4415da53fdea[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 15:04:47 2020 +0800
+
+    输出编号归一的pdb
+
+[33mcommit 06fe25c9a27850b8ad7552c481675218bfefb1cd[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 14:52:04 2020 +0800
+
+    rna_tool_new:
+    pdb_2_fasta优化
+    res_seq_edit优化
+    rna_tool_companion:
+    序列叠合编号优化
+    注释输出单链文件、找突变点
+
+[33mcommit e8a97133ef96ed98b89eaf86dc1f11facf700845[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 13:20:12 2020 +0800
+
+    添加功能区突出标记
+
+[33mcommit 25b036ee866b349240ec37d4543181b7053103f0[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 13:18:42 2020 +0800
+
+    格式化代码
+
+[33mcommit 9ab7b594a25cc8f619acf3be3e84bb2a686252e7[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 13:17:59 2020 +0800
+
+    读clsr文件、筛选合适的肽链以及小分子
+
+[33mcommit 425ee27dbc79097a34835396c8d386b402873b99[m
+Author: xyjiang <656385934@qq.com>
+Date:   Fri Nov 27 00:51:14 2020 +0800
+
+    修改monomer_identify
+
+[33mcommit aa96665e012c69da788f1682de100ac8fab58185[m[33m ([m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m
+Author: xyjiang <656385934@qq.com>
+Date:   Thu Nov 26 23:57:43 2020 +0800
+
+    init
