@@ -7,7 +7,7 @@ def read_targets(target_file='targets.out'):
     """
     target_dict = {}
     with open(target_file) as targets:
-        lines = targets.readlines
+        lines = targets.readlines()
         for line in lines:
             line = line.split()
             target_dict[line[0]] = line[1]
@@ -45,7 +45,7 @@ def length_of_chain(cluster: list, pdb_id, chain_id):
     返回给定肽链的长度（aa）
     """
     for item in cluster:
-        if item[1] == ClsrReader.RECEPTOR_FLAG and item[2] == chain_id:
+        if item[1] == pdb_id and item[2] == chain_id:
             return item[0]
     else:
         return -1
@@ -60,7 +60,7 @@ def get_cluster_by_id(cluster_file, pdb_id, chain_id):
             cluster = clsr_reader.next_cluster()
             if cluster is None:
                 return None
-            length_of_receptor = length_of_chain(cluster, pdb_id, chain_id)
+            length_of_receptor = length_of_chain(cluster, pdb_id.upper(), chain_id.upper())
             if length_of_receptor > -1:
                 return cluster
 
@@ -77,10 +77,18 @@ class ClsrReader:
     def __exit__(self, exc_type, exc_value, traceback):
         self.clsr_file.close()
 
-    def _parse_cluster(self):
+    def _parse_cluster(self, revert = 0):
         """
         将聚类得到的类别信息转换为list
         """
+        # Once a parsing progress is done, the next ">Cluster" line
+        # is skipped by finding the ending point of current cluster,
+        # and the next "1 100aa, >6PS2:A..." line is skipped by caller
+        # while checking EOF sign. So, whenever a line containing 
+        # chain data is skipped, we need to revert the file pointer
+        # to retain this line.
+        file_pos = self.clsr_file.tell()
+        self.clsr_file.seek(file_pos - revert)
         cluster = []
         while True:
             line = self.clsr_file.readline()
@@ -88,8 +96,8 @@ class ClsrReader:
                 # 读完一个类，或者读到文件结尾时返回
                 return cluster
             values = line.split()
-            # original format: "123aa".
-            chain_length = int(values[1][:-2])
+            # original format: "123aa,".
+            chain_length = int(values[1][:-3])
             # 为clustering_stage_a标记模板链
             if values[2].startswith(">receptor"):
                 pdb_id = ClsrReader.RECEPTOR_FLAG
@@ -109,5 +117,5 @@ class ClsrReader:
             if not line:
                 return None
             if line.startswith(">Cluster"):
-                continue
-            return self._parse_cluster()
+                return self._parse_cluster()
+            return self._parse_cluster(len(line))
