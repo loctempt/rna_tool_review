@@ -189,7 +189,9 @@ for pr_class_name in dirList:
     rough_sele_pr_dict = {}
     for file in fileList:
         print(file[0:4])
-        if file[0:4] not in cluster:
+        # 单独取出pdb_id，用于判断是否跳过
+        pdb_id_list = list(map(lambda x: x[1], cluster))
+        if file[0:4] not in pdb_id_list:
             continue
 
         with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
