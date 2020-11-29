@@ -185,7 +185,7 @@ for pr_class_name in dirList:
 
     #将templateID+chainid写入文件 
     with open(dirPath+'/class_templateID.txt','w+') as cluster_file:
-        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id)
+        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id+'\n')
 
     rough_sele_pr_dict = {}
     for file_name in fileList:
