@@ -187,22 +187,22 @@ for pr_class_name in dirList:
         cluster_file.write(pr_class_name+'  '+templateID+template_chain_id)
 
     rough_sele_pr_dict = {}
-    for file in fileList:
-        print(file[0:4])
+    for file_name in fileList:
+        file_name = file_name.upper()
         cur_chainid=''
         cur_pdbid=''
         # 单独取出pdb_id，用于判断是否跳过
         pdb_id_list = list(map(lambda x: x[1], cluster))
-        if file[0:4] not in cluster:
+        if file_name[0:4] not in pdb_id_list:
             continue
         else:
-            cur_pdbid=file[0:4]
+            cur_pdbid=file_name[0:4]
             for cluster_i in cluster:
                 if cur_pdbid==cluster_i[1]:
                     cur_chainid=cluster_i[2]        
                     break 
 
-        with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
+        with open(os.path.join(filePath, 'data', file_name), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
             for aa in cur_PDB.macro_molecule.get_complete_aa():
@@ -251,7 +251,7 @@ for pr_class_name in dirList:
             else:
                 rough_sele_pr_dict[str(cur_pdbid+cur_chainid)] = [macro_chain]
 
-            # PDB_dict[str(file)[:4]] = cur_PDB
+            # PDB_dict[str(file_name)[:4]] = cur_PDB
 
     # =========================
     # 功能：读outRes.clsr文件
@@ -319,7 +319,7 @@ for pr_class_name in dirList:
     # 序列叠合编号 鉴定突变位点
     # =========================
     # template chain 是dude 模板蛋白 
-    template_chain = rough_sele_pr_dict[templateID+template_chain_id][0]
+    template_chain = rough_sele_pr_dict[templateID.upper()+template_chain_id][0]
     template_chain.pdb_2_fasta()
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
