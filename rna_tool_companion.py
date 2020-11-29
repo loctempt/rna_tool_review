@@ -167,14 +167,20 @@ dirList = os.listdir(dirPath)
 for pr_class_name in dirList:
     # os.system('pause')
     filePath = os.path.join(dirPath, pr_class_name)
-    if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
-        continue
+    # if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
+    #     continue
 
     fileList = os.listdir(os.path.join(filePath, 'data'))
-    PDB_dict = {}
+    # PDB_dict = {}
+    templateID = get_template_id(pr_class_name)
+    template_chain_id, cluster = clustering(templateID, filePath)
 
+    rough_sele_pr_dict = {}
     for file in fileList:
         print(file)
+        #  TODO 将两个部分交换后 加判断 以确定file在不在列表中，
+        if file not in list:
+            continue 
         with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
@@ -211,7 +217,21 @@ for pr_class_name in dirList:
                     # 因为遍历会每次取下一个元素
                     # 而remove使下一个元素前移
                     # 引用不传递！！！！！
-            PDB_dict[str(file)[:4]] = cur_PDB
+
+            macro_chain, micro_chain=cur_PDB.molecule_cat(
+                    curChainID)
+            if micro_chain is not None:
+                for rough_micro_mol in micro_chain.get_complete_aa():
+                    one_Mol_total_cutoff = dist_cutoff_cal(
+                        rough_micro_mol.get_complete_atom(), macro_chain.get_complete_atom(), 5)
+                if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom()) < 0.6:
+                    micro_chain.aa_List.remove(rough_micro_mol)
+                rough_sele_pr_dict[str(
+                    curPdb+curChainID)] = [macro_chain, micro_chain]
+            else:
+                rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
+
+            # PDB_dict[str(file)[:4]] = cur_PDB
 
     # =========================
     # 功能：读outRes.clsr文件
@@ -219,8 +239,7 @@ for pr_class_name in dirList:
     # 输出pdb链
     # rough_sele_pr_dict = {}
     # clsrNum = input("plz input "+pr_class_name+" template class ID:")
-    templateID = get_template_id(pr_class_name)
-    template_chain_id, cluster = clustering(templateID, filePath)
+
 
     # with open(os.path.join(filePath,'序列聚类','outRes.clstr'), 'r') as clsrFile:
     #     clsrnum_found = False
@@ -238,15 +257,15 @@ for pr_class_name in dirList:
     #             curPdb = line[2][1:5]
     #             curChainID = line[2][6]
 
-    #             macro_chain, micro_chain = PDB_dict[curPdb.lower()].molecule_cat(
-    #                 curChainID)
-    #             if len(macro_chain.get_complete_aa()) >= maxchainlen:
-    #                 maxchainlen = len(macro_chain.get_complete_aa())
-    #             if micro_chain is not None:
-    #                 rough_sele_pr_dict[str(
-    #                     curPdb+curChainID)] = [macro_chain, micro_chain]
-    #             else:
-    #                 rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
+                # macro_chain, micro_chain = PDB_dict[curPdb.lower()].molecule_cat(
+                #     curChainID)
+                # if len(macro_chain.get_complete_aa()) >= maxchainlen:
+                #     maxchainlen = len(macro_chain.get_complete_aa())
+                # if micro_chain is not None:
+                #     rough_sele_pr_dict[str(
+                #         curPdb+curChainID)] = [macro_chain, micro_chain]
+                # else:
+                #     rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
 
     # =========================
     # 筛选合适的肽链以及小分子
@@ -256,18 +275,18 @@ for pr_class_name in dirList:
     tmp_dict = {}
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
-        micro_chain = value[1] if len(value) == 2 else None
+        micro_chain = value[1] # if len(value) == 2 else None
         if float(len(macro_chain.get_complete_aa()))/maxchainlen > 0.5:
-            if len(value) == 1:
-                tmp_dict[key] = value
-                continue
-            for rough_micro_mol in micro_chain.get_complete_aa():
-                one_Mol_total_cutoff = dist_cutoff_cal(
-                    rough_micro_mol.get_complete_atom(), macro_chain.get_complete_atom(), 5)
-                if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom()) < 0.6:
-                    micro_chain.aa_List.remove(rough_micro_mol)
-            tmp_dict[key] = value
-    rough_sele_pr_dict = tmp_dict
+            # if len(value) == 1:
+            #     tmp_dict[key] = value
+            #     continue
+    #         for rough_micro_mol in micro_chain.get_complete_aa():
+    #             one_Mol_total_cutoff = dist_cutoff_cal(
+    #                 rough_micro_mol.get_complete_atom(), macro_chain.get_complete_atom(), 5)
+    #             if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom()) < 0.6:
+    #                 micro_chain.aa_List.remove(rough_micro_mol)
+    #         tmp_dict[key] = value
+    # rough_sele_pr_dict = tmp_dict
 
     # 输出单链文件 检查小分子和肽链 当前筛选的结果是否合适 属于中间结果 可删
     # for key, value in rough_sele_pr_dict.items():
@@ -280,6 +299,7 @@ for pr_class_name in dirList:
     # =========================
     # 序列叠合编号 鉴定突变位点
     # =========================
+    # TODO template ID 是dude 模板蛋白 id
     template_chain = rough_sele_pr_dict[templateID][0]
     template_chain.pdb_2_fasta()
     for key, value in rough_sele_pr_dict.items():
