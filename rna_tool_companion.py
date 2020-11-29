@@ -3,7 +3,9 @@ import os
 import shutil
 import subprocess
 import math
-
+import math
+import util
+from config import Config
 
 def dist_cutoff_cal(micro_atom_list, macro_atom_list, cutoff):
     """
@@ -46,27 +48,115 @@ def call_superimopose(pdb_id,data_pth):
     shutil.copyfile(data_pth+'/pre_dealing/'+pdb_id+'.pdb',data_pth+'/superimpose/template.pdb')
     for i in pdb_list:
         shutil.copyfile(data_pth+'/pdb/'+i,data_pth+'/superimpose/align.pdb')
-        call_perl_and_rename(i,data_pth+'/superimpose',script_pth)
+        call_perl_and_rename(i,data_pth+'/superimpose',script_pth)  # FIXME script_pth未定义
         # TODO script path undefined
         os.remove(data_pth+'/superimpose/align.pdb') 
     os.remove(data_pth+'/superimpose/template.pdb')
 
+def prepare_fasta(template_id, pdb:PDB, cluster_dir):
+    """
+    将pdb中的大分子转成fasta格式，写入缓存文件
+    """
+    macro_molecule = pdb.get_macro_molecule()
+    chains = macro_molecule.get_complete_chain()
+    out_file = os.path.join(cluster_dir, template_id+".fasta")
+    with open(out_file, 'w'):
+        for chain in chains:
+            chain.pdb_2_fasta()
+        out_file.write('\n'.join(chains))
 
-dirPath = input("输入当前这一类蛋白（如激酶）的目录:")
+def get_chain_id_by_cluster(template_id , cluster_dir):
+    """
+    从聚类结果中找到长度最接近receptor的模板链
+    """
+    cluster_file = os.path.join(cluster_dir, "firstRes.clsr")
+    cluster = util.get_cluster_by_id(cluster_file, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
+    length_of_receptor = util.length_of_chain(cluster, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
+    cluster = list(filter(lambda x: x[1] != util.ClsrReader.RECEPTOR_FLAG and x[1] == template_id, cluster))
+    cluster = sorted(cluster, key=lambda x:abs(x[0] - length_of_receptor))
+    chain_id = cluster[0][2]
+    return chain_id
+
+def clustering_stage_a(template_id, file_dir, cluster_dir):
+    """
+    模板链ID未知，通过stage_a聚类，找出模板链ID
+    """
+    obabel_input = os.path.join(file_dir, "dude", "receptor.pdb")
+    obabel_output = os.path.join(cluster_dir, "receptor.fasta")
+    obabel_cmd = "obabel -ipdb {} -ofasta -O {}".format(obabel_input, obabel_output)
+    os.system(obabel_cmd)
+
+    cat_input = obabel_output
+    cat_output = os.path.join(cluster_dir, template_id+".fasta")
+    os.system("cat {} >> {}".format(cat_input, cat_output))
+
+    cdhit_input = cat_output
+    cdhit_output = os.path.join(cluster_dir, "firstRes")
+    os.system("cdhit -i {} -o {} -c 0.70 -n 5".format(cdhit_input, cdhit_output))
+
+def clustering_stage_b(cluster_dir):
+    """
+    正式聚类过程
+    """
+    cdhit_input = os.path.join(cluster_dir, "fasta.txt")
+    cdhit_output = os.path.join(cluster_dir, "secondRes")
+    os.system("cdhit -i {} -o {} -c 0.70 -n 5".format(cdhit_input, cdhit_output))
+
+def cluster_sanitize(template_id, chain_id, cluster_dir):
+    """
+    去除长度小于模板链长度50%的短链
+    """
+    cluster_file = os.path.join(cluster_dir, "secondRes.clsr")
+    cluster = util.get_cluster_by_id(cluster_file, template_id, chain_id)
+    length_of_template = util.length_of_chain(cluster, template_id, chain_id)
+    cluster = list(filter(lambda x: x[0] >= 0.5 * length_of_template, cluster))
+    return cluster
+
+def clustering(template_id, file_dir):
+    """
+    聚类功能
+
+    Returns:
+    模板链的chain id，聚类结果（排除与模板链长度差值超过50%的链）
+    """
+    cluster_dir = os.path.join(file_dir, "序列聚类")
+    template_pdb = None
+    chain_id = None
+    # 构造PDB对象
+    with open(os.path.join(file_dir, 'data', template_id+".pdb"), 'r') as pdb_file:
+        template_pdb = PDB(pdb_file.readlines())
+    # 针对单链/多链分别采取对策
+    if util.is_single_chain(template_pdb):
+        chain_id = util.get_chain_id(template_pdb)
+    else:
+        prepare_fasta(template_id, template_pdb, cluster_dir)
+        clustering_stage_a(template_id, file_dir, cluster_dir)
+        chain_id = get_chain_id_by_cluster(template_id, cluster_dir)
+    clustering_stage_b(cluster_dir)
+    sanitized_cluster = cluster_sanitize(template_id, chain_id, cluster_dir)
+    return chain_id, sanitized_cluster
+
+target_dict = util.read_targets(Config.TARGETS_FILE_PATH)
+
+def get_template_id(protein_name):
+    return target_dict[protein_name]
+
+# dirPath = input("输入当前这一类蛋白（如激酶）的目录:")
+dirPath = Config.DIR_PATH
 dirList = os.listdir(dirPath)
 
-for dir in dirList:
+for pr_class_name in dirList:
     # os.system('pause')
-    filePath = dirPath+'\\'+dir
-    if not os.path.isdir(filePath) or dir not in ['braf']:
+    filePath = os.path.join(dirPath, pr_class_name)
+    if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
         continue
 
-    fileList = os.listdir(filePath+'\\data')
+    fileList = os.listdir(os.path.join(filePath,'data'))
     PDB_dict = {}
 
     for file in fileList:
         print(file)
-        with open(filePath+'\\data\\'+file, 'r') as cur_file:
+        with open(os.path.join(filePath,'data',file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
             for aa in cur_PDB.macro_molecule.get_complete_aa():
@@ -108,35 +198,37 @@ for dir in dirList:
     # 功能：读outRes.clsr文件
     # =========================
     # 输出pdb链
-    rough_sele_pr_dict = {}
-    clsrNum = input("plz input "+dir+" template class ID:")
-    templateID = input_legalization(
-        "template PDB+Chain ID(as 2OF2A):", 5, str.isupper)
-    with open(filePath+'\\序列聚类\\outRes.clstr', 'r') as clsrFile:
-        clsrnum_found = False
-        maxchainlen = -1
-        for line in clsrFile.readlines():
-            line = line.split()
-            if line[0] == '>Cluster' and line[1] == str(clsrNum):
-                clsrnum_found = True
-                # 跳过目标段落第一行
-                continue
-            if clsrnum_found:
-                if line[0] == '>Cluster':
-                    # 来到下一段落，结束循环
-                    break
-                curPdb = line[2][1:5]
-                curChainID = line[2][6]
+    # rough_sele_pr_dict = {}
+    # clsrNum = input("plz input "+pr_class_name+" template class ID:")
+    templateID = get_template_id(pr_class_name)
+    template_chain_id, cluster = clustering(templateID, filePath)
+    
 
-                macro_chain, micro_chain = PDB_dict[curPdb.lower()].molecule_cat(
-                    curChainID)
-                if len(macro_chain.get_complete_aa()) >= maxchainlen:
-                    maxchainlen = len(macro_chain.get_complete_aa())
-                if micro_chain is not None:
-                    rough_sele_pr_dict[str(
-                        curPdb+curChainID)] = [macro_chain, micro_chain]
-                else:
-                    rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
+    # with open(os.path.join(filePath,'序列聚类','outRes.clstr'), 'r') as clsrFile:
+    #     clsrnum_found = False
+    #     maxchainlen = -1
+    #     for line in clsrFile.readlines():
+    #         line = line.split()
+    #         if line[0] == '>Cluster' and line[1] == str(clsrNum):
+    #             clsrnum_found = True
+    #             # 跳过目标段落第一行
+    #             continue
+    #         if clsrnum_found:
+    #             if line[0] == '>Cluster':
+    #                 # 来到下一段落，结束循环
+    #                 break
+    #             curPdb = line[2][1:5]
+    #             curChainID = line[2][6]
+
+    #             macro_chain, micro_chain = PDB_dict[curPdb.lower()].molecule_cat(
+    #                 curChainID)
+    #             if len(macro_chain.get_complete_aa()) >= maxchainlen:
+    #                 maxchainlen = len(macro_chain.get_complete_aa())
+    #             if micro_chain is not None:
+    #                 rough_sele_pr_dict[str(
+    #                     curPdb+curChainID)] = [macro_chain, micro_chain]
+    #             else:
+    #                 rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
 
     # =========================
     # 筛选合适的肽链以及小分子
@@ -161,7 +253,7 @@ for dir in dirList:
 
     # 输出单链文件 检查小分子和肽链 当前筛选的结果是否合适 属于中间结果 可删
     # for key, value in rough_sele_pr_dict.items():
-    #     with open(filePath+'\\output\\'+key+'.pdb', 'w') as outFile:
+    #     with open(os.path.join(filePath,'output',key+'.pdb'), 'w') as outFile:
     #         outFile.writelines(str(value[0]))
     #         outFile.write('\nTER\n')
     #         if len(value) > 1:
@@ -178,7 +270,7 @@ for dir in dirList:
         mth, tp = macro_chain.sequence_match(template_chain)
         mthList = macro_chain.res_seq_edit(mth, tp)
         # 找突变点, 暂时未用上
-        # with open(filePath+'\\mutations\\'+key+'.txt', 'w') as mutfile:
+        # with open(os.path.join(filePath,'mutations',key+'.txt'), 'w') as mutfile:
         #     for i in macro_chain.mutation_cal(tp, mth, mthList):
         #         mutfile.write(str(i))
 
@@ -188,7 +280,7 @@ for dir in dirList:
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
         micro_chain = value[1] if len(value) == 2 else None
-        with open(filePath+'\\pre_dealing\\'+key+'.pdb', 'w') as outFile:
+        with open(os.path.join(filePath,'pre_dealing',key+'.pdb'), 'w') as outFile:
             outFile.writelines(str(macro_chain))
             outFile.write('\nTER\n')
             if len(value) > 1:
@@ -196,7 +288,7 @@ for dir in dirList:
 
     # superimpose
     # print('下一步：蛋白叠合，请移至服务器完成')
-    call_superimopose(templateID,dirPath+'/'+dir)
+    call_superimopose(templateID,dirPath+'/'+pr_class_name)
     os.system('pause')
 
     # =========================
@@ -205,12 +297,12 @@ for dir in dirList:
     # 读文件构造pdb对象
     # 计算与各个小分子距离在5埃内的分子  构造大小分子dict{key,[macro,micro]}
     #  没有小分子的直接输出一个大分子即可 大小分子间加TER
-    # superimposefileList = os.listdir(filePath+'\\superimpose\\input')
+    # superimposefileList = os.listdir(os.path.join(filePath,'superimpose','input'))
     # # rough_sele_pr_dict.clear()
     # rough_sele_pr_dict = {}
     # for surfile in superimposefileList:
     #     print(surfile)
-    #     with open(filePath+'\\superimpose\\input\\'+surfile, 'r') as cur_file:
+    #     with open(os.path.join(filePath,'superimpose','input',surfile), 'r') as cur_file:
     #         cur_PDB = PDB(cur_file.readlines())
     #         if cur_PDB.micro_molecule != None:
     #             rough_sele_pr_dict[str(surfile[:5])] = [cur_PDB.macro_molecule.get_chain(
@@ -249,7 +341,7 @@ for dir in dirList:
     #     macro_chain = value[0]
     #     micro_chain = value[1] if len(value) == 2 else None
     #     print(key)
-    #     with open(filePath+'\\superimpose\\output\\'+key+'.pdb', 'w')as outFile:
+    #     with open(os.path.join(filePath,'superimpose','output',key+'.pdb'), 'w')as outFile:
     #         if len(value) == 1:
     #             outFile.writelines(str(macro_chain))
     #         else:
@@ -271,12 +363,12 @@ for dir in dirList:
     # # 找到sidechain和backbone的最大值 实际上要找到每个氨基酸的最大rmsd值 保存该口袋
     # # 格式：2OF2A
     # rough_template_pkt = input_legalization(
-    #     "DUD-E" + dir + " receptor(2OF2A)：", 5, str.isupper)
-    # rough_pkfileList = os.listdir(filePath+'\\flex_site\\input')
+    #     "DUD-E" + pr_class_name + " receptor(2OF2A)：", 5, str.isupper)
+    # rough_pkfileList = os.listdir(os.join(filePath,'flex_site','input'))
     # specified_sele_pkt_dict = {}
     # # specified_sele_pkt_dict.clear()
     # for rgh_file in rough_pkfileList:
-    #     with open(filePath+'\\flex_site\\input\\'+rgh_file, 'r') as cur_file:
+    #     with open(os.path.join(filePath,'flex_site','input',rgh_file), 'r') as cur_file:
     #         print(rgh_file)
     #         cur_PDB = PDB(cur_file.readlines())
     #         if cur_PDB.micro_molecule != None:
@@ -333,7 +425,7 @@ for dir in dirList:
     # sorted_max_rmsd_pkt = sorted(
     #     max_rmsd_pkt.items(), key=lambda item: item[1], reverse=True)
 
-    # with open(filePath+'\\flex_site\\output\\'+dir+'_'+rough_template_pkt+'_pocket.pdb', 'w') as pocket, open(filePath+'\\flex_site\\output\\'+rough_template_pkt+'_pocket_rmsd.txt', 'w') as pocket_rmsd:
+    # with open(os.path.join(filePath,'flex_site','output',pr_class_name+'_'+rough_template_pkt+'_pocket.pdb'), 'w') as pocket, open(os.path.join(filePath,'flex_site','output',rough_template_pkt+'_pocket_rmsd.txt'), 'w') as pocket_rmsd:
     #     # for i in range(len,ax)
     #     for pkt_key in max_pkt:
     #         pocket.writelines(str(max_pkt[pkt_key]))

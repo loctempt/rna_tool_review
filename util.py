@@ -1,10 +1,113 @@
-class Util:
-    @staticmethod
-    def read_targets(target_file='targets.out'):
-        target_dict = {}
-        with open(target_file) as targets:
-            lines = targets.readlines
-            for line in lines:
-                line = line.split()
-                target_dict[line[0]] = line[1]
-        return target_dict
+from rna_tool_new import *
+
+
+def read_targets(target_file='targets.out'):
+    """
+    读targets文件，形成 “蛋白类别=>模板蛋白” 的映射关系
+    """
+    target_dict = {}
+    with open(target_file) as targets:
+        lines = targets.readlines
+        for line in lines:
+            line = line.split()
+            target_dict[line[0]] = line[1]
+    return target_dict
+
+
+def get_complete_chain(pdb: PDB):
+    """
+    取出pdb文件中所有大分子链
+    """
+    macro_molecule = pdb.get_macro_molecule()
+    complete_chain = macro_molecule.get_complete_chain()
+    return complete_chain
+
+
+def get_chain_id(pdb: PDB):
+    """
+    取单链蛋白的链id
+    """
+    complete_chain = get_complete_chain(pdb)
+    chain = complete_chain[0]
+    return chain.get_chainID()
+
+
+def is_single_chain(pdb: PDB):
+    """
+    检查给定pdb是否为单链结构
+    """
+    complete_chain = get_complete_chain(pdb)
+    return len(complete_chain) == 1
+
+
+def length_of_chain(cluster: list, pdb_id, chain_id):
+    """
+    返回给定肽链的长度（aa）
+    """
+    for item in cluster:
+        if item[1] == ClsrReader.RECEPTOR_FLAG and item[2] == chain_id:
+            return item[0]
+    else:
+        return -1
+
+
+def get_cluster_by_id(cluster_file, pdb_id, chain_id):
+    """
+    从clusters中取出包含pdb_id和chain_id的cluster
+    """
+    with ClsrReader(cluster_file) as clsr_reader:
+        while True:
+            cluster = clsr_reader.next_cluster()
+            if cluster is None:
+                return None
+            length_of_receptor = length_of_chain(cluster, pdb_id, chain_id)
+            if length_of_receptor > -1:
+                return cluster
+
+
+class ClsrReader:
+    RECEPTOR_FLAG = "receptor"
+
+    def __init__(self, clsr_file):
+        self.clsr_file = open(clsr_file, 'r')
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.clsr_file.close()
+
+    def _parse_cluster(self):
+        """
+        将聚类得到的类别信息转换为list
+        """
+        cluster = []
+        while True:
+            line = self.clsr_file.readline()
+            if not line or line.startswith(">Cluster"):
+                # 读完一个类，或者读到文件结尾时返回
+                return cluster
+            values = line.split()
+            # original format: "123aa".
+            chain_length = int(values[1][:-2])
+            # 为clustering_stage_a标记模板链
+            if values[2].startswith(">receptor"):
+                pdb_id = ClsrReader.RECEPTOR_FLAG
+                chain_id = ClsrReader.RECEPTOR_FLAG
+            # 正常读取
+            else:
+                pdb_id = values[2][1:5]
+                chain_id = values[2][6]
+            cluster.append((chain_length, pdb_id, chain_id))
+
+    def next_cluster(self):
+        """
+        读聚类文件，从中取出下一个类
+        """
+        while True:
+            line = self.clsr_file.readline()
+            if not line:
+                return None
+            if line.startswith(">Cluster"):
+                continue
+            return self._parse_cluster()
