@@ -358,7 +358,8 @@ class Chain:
         for forwardPointer in range(first_pairing_position, len(mth)):
             mthList.append(tpList[forwardPointer])
         for backwardPointer in range(first_pairing_position-1, -1, -1):
-            mthList.insert(0, backwardPointer-first_pairing_position+tpList[first_pairing_position])
+            mthList.insert(
+                0, backwardPointer-first_pairing_position+tpList[first_pairing_position])
 
         # 更新chain中各氨基酸的resseq
         amino_acid_cnt = 0
