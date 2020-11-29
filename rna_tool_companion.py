@@ -180,7 +180,7 @@ for pr_class_name in dirList:
         print(file)
         #  TODO 将两个部分交换后 加判断 以确定file在不在列表中，
         if file not in list:
-            continue 
+            continue
         with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
@@ -218,8 +218,7 @@ for pr_class_name in dirList:
                     # 而remove使下一个元素前移
                     # 引用不传递！！！！！
 
-            macro_chain, micro_chain=cur_PDB.molecule_cat(
-                    curChainID)
+            macro_chain, micro_chain = cur_PDB.molecule_cat(curChainID)
             if micro_chain is not None:
                 for rough_micro_mol in micro_chain.get_complete_aa():
                     one_Mol_total_cutoff = dist_cutoff_cal(
@@ -239,7 +238,6 @@ for pr_class_name in dirList:
     # 输出pdb链
     # rough_sele_pr_dict = {}
     # clsrNum = input("plz input "+pr_class_name+" template class ID:")
-
 
     # with open(os.path.join(filePath,'序列聚类','outRes.clstr'), 'r') as clsrFile:
     #     clsrnum_found = False
