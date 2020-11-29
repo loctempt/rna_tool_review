@@ -35,29 +35,39 @@ def input_legalization(marked_words, legal_num, case_status):
     return tmp
 
 
-def call_perl_and_rename(rename_to, matchPath, script_path):
+def call_perl_and_rename(rename_to):
+    working_dir = os.getcwd()
+    matchPath = Config.SUPERIMPOSE_PATH
     print('start running perl script...')
     os.chdir(matchPath)
     print('call_perl:', os.getcwd())
-    ret = subprocess.call(['perl', script_path+'/superimopose.pl'])
+    ret = subprocess.call(['perl', Config.SUPERIMPOSE_PERL_SCRIPT_PATH])
     if ret == 0:
         os.rename(matchPath+'/align_tmp.pdb', matchPath+'/'+rename_to)
         print('success')
     else:
         print('failed')
+    os.chdir(working_dir)
 
 
 def call_superimopose(pdb_id, data_pth):
+    """
+    将pdb文件复制到Config.SUPERIMPOSE_PATH下，调用Chimera叠合
+    """
+    if not os.path.exists(Config.SUPERIMPOSE_PATH):
+        os.mkdir(Config.SUPERIMPOSE_PATH)
+        shutil.copyfile('superimopose.pl', Config.SUPERIMPOSE_PERL_SCRIPT_PATH)
     pdb_list = os.listdir(data_pth+'/pre_dealing')
-    shutil.copyfile(data_pth+'/pre_dealing/'+pdb_id+'.pdb',
-                    data_pth+'/superimpose/template.pdb')
+    template_src = os.path.join(data_pth, 'pre_dealing', pdb_id.upper()+'.pdb')
+    template_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'template.pdb')
+    shutil.copyfile(template_src, template_dest)
     for i in pdb_list:
-        shutil.copyfile(data_pth+'/pdb/'+i, data_pth+'/superimpose/align.pdb')
-        call_perl_and_rename(i, data_pth+'/superimpose',
-                             script_pth)  # FIXME script_pth未定义
-        # TODO script path undefined
-        os.remove(data_pth+'/superimpose/align.pdb')
-    os.remove(data_pth+'/superimpose/template.pdb')
+        align_src = os.path.join(data_pth, 'pre_dealing', i)
+        align_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'align.pdb')
+        shutil.copyfile(align_src, align_dest)
+        call_perl_and_rename(i)
+        os.remove(align_dest)
+    os.remove(template_dest)
 
 
 def prepare_fasta(template_id, pdb: PDB, cluster_dir):
@@ -169,7 +179,8 @@ for pr_class_name in dirList:
     filePath = os.path.join(dirPath, pr_class_name)
     # if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
     #     continue
-
+    if not os.path.isdir(filePath):
+        continue
     fileList = os.listdir(os.path.join(filePath, 'data'))
     # PDB_dict = {}
     templateID = get_template_id(pr_class_name)
@@ -177,23 +188,25 @@ for pr_class_name in dirList:
 
     #将templateID+chainid写入文件 
     with open(dirPath+'/class_templateID.txt','w+') as cluster_file:
-        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id)
+        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id+'\n')
 
     rough_sele_pr_dict = {}
-    for file in fileList:
-        print(file[0:4])
+    for file_name in fileList:
+        file_name = file_name.upper()
         cur_chainid=''
         cur_pdbid=''
-        if file[0:4] not in cluster:
+        # 单独取出pdb_id，用于判断是否跳过
+        pdb_id_list = list(map(lambda x: x[1], cluster))
+        if file_name[0:4] not in pdb_id_list:
             continue
         else:
-            cur_pdbid=file[0:4]
+            cur_pdbid=file_name[0:4]
             for cluster_i in cluster:
                 if cur_pdbid==cluster_i[1]:
                     cur_chainid=cluster_i[2]        
                     break 
 
-        with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
+        with open(os.path.join(filePath, 'data', file_name.lower()), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
             for aa in cur_PDB.macro_molecule.get_complete_aa():
@@ -242,7 +255,7 @@ for pr_class_name in dirList:
             else:
                 rough_sele_pr_dict[str(cur_pdbid+cur_chainid)] = [macro_chain]
 
-            # PDB_dict[str(file)[:4]] = cur_PDB
+            # PDB_dict[str(file_name)[:4]] = cur_PDB
 
     # =========================
     # 功能：读outRes.clsr文件
@@ -310,7 +323,7 @@ for pr_class_name in dirList:
     # 序列叠合编号 鉴定突变位点
     # =========================
     # template chain 是dude 模板蛋白 
-    template_chain = rough_sele_pr_dict[templateID+template_chain_id][0]
+    template_chain = rough_sele_pr_dict[templateID.upper()+template_chain_id][0]
     template_chain.pdb_2_fasta()
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
