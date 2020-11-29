@@ -35,29 +35,36 @@ def input_legalization(marked_words, legal_num, case_status):
     return tmp
 
 
-def call_perl_and_rename(rename_to, matchPath, script_path):
+def call_perl_and_rename(rename_to):
+    working_dir = os.getcwd()
+    matchPath = Config.SUPERIMPOSE_PATH
     print('start running perl script...')
     os.chdir(matchPath)
     print('call_perl:', os.getcwd())
-    ret = subprocess.call(['perl', script_path+'/superimopose.pl'])
+    ret = subprocess.call(['perl', Config.SUPERIMPOSE_PERL_SCRIPT_PATH])
     if ret == 0:
         os.rename(matchPath+'/align_tmp.pdb', matchPath+'/'+rename_to)
         print('success')
     else:
         print('failed')
+    os.chdir(working_dir)
 
 
 def call_superimopose(pdb_id, data_pth):
+    """
+    将pdb文件复制到Config.SUPERIMPOSE_PATH下，调用Chimera叠合
+    """
     pdb_list = os.listdir(data_pth+'/pre_dealing')
-    shutil.copyfile(data_pth+'/pre_dealing/'+pdb_id+'.pdb',
-                    data_pth+'/superimpose/template.pdb')
+    template_src = os.path.join(data_pth, 'pre_dealing', pdb_id+'.pdb')
+    template_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'template.pdb')
+    shutil.copyfile(template_src, template_dest)
     for i in pdb_list:
-        shutil.copyfile(data_pth+'/pdb/'+i, data_pth+'/superimpose/align.pdb')
-        call_perl_and_rename(i, data_pth+'/superimpose',
-                             script_pth)  # FIXME script_pth未定义
-        # TODO script path undefined
-        os.remove(data_pth+'/superimpose/align.pdb')
-    os.remove(data_pth+'/superimpose/template.pdb')
+        align_src = os.path.join(data_pth, 'pdb', i)
+        align_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'align.pdb')
+        shutil.copyfile(align_src, align_dest)
+        call_perl_and_rename(i)
+        os.remove(align_dest)
+    os.remove(template_dest)
 
 
 def prepare_fasta(template_id, pdb: PDB, cluster_dir):
