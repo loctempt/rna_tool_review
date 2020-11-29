@@ -189,10 +189,18 @@ for pr_class_name in dirList:
     rough_sele_pr_dict = {}
     for file in fileList:
         print(file[0:4])
+        cur_chainid=''
+        cur_pdbid=''
         # 单独取出pdb_id，用于判断是否跳过
         pdb_id_list = list(map(lambda x: x[1], cluster))
-        if file[0:4] not in pdb_id_list:
+        if file[0:4] not in cluster:
             continue
+        else:
+            cur_pdbid=file[0:4]
+            for cluster_i in cluster:
+                if cur_pdbid==cluster_i[1]:
+                    cur_chainid=cluster_i[2]        
+                    break 
 
         with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
@@ -231,7 +239,7 @@ for pr_class_name in dirList:
                     # 而remove使下一个元素前移
                     # 引用不传递！！！！！
 
-            macro_chain, micro_chain = cur_PDB.molecule_cat(template_chain_id)
+            macro_chain, micro_chain = cur_PDB.molecule_cat(cur_chainid)
             if micro_chain is not None:
                 for rough_micro_mol in micro_chain.get_complete_aa():
                     one_Mol_total_cutoff = dist_cutoff_cal(
@@ -239,9 +247,9 @@ for pr_class_name in dirList:
                 if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom()) < 0.6:
                     micro_chain.aa_List.remove(rough_micro_mol)
                 rough_sele_pr_dict[str(
-                    templateID+template_chain_id)] = [macro_chain, micro_chain]
+                    cur_pdbid+cur_chainid)] = [macro_chain, micro_chain]
             else:
-                rough_sele_pr_dict[str(templateID+template_chain_id)] = [macro_chain]
+                rough_sele_pr_dict[str(cur_pdbid+cur_chainid)] = [macro_chain]
 
             # PDB_dict[str(file)[:4]] = cur_PDB
 
