@@ -109,6 +109,8 @@ for pr in pr_list:
     # if pr not in ['akt2']:
     #     continue
     small_molecules,big_molecules={},{}
+    if not os.path.isdir(os.path.join(pr_path,str(pr))):
+        continue
     temp=pr_dict[str(pr)]
     # temp=input('plz input '+pr +' template:')
     peptide_list=os.listdir(pr_path+'/'+pr+'/superimpose')
@@ -269,7 +271,8 @@ for pr in pr_list:
             m+=1
         res = sorted(res.items(),key=lambda item:item[1][0],reverse=True)
         # output
-        with open(pr_path+'/output/'+pr+'_flexs_'+str(i)+'.txt','w') as flex_file ,open(pr_path+'/output/'+pr+'_pocket_'+str(i)+'.pdb','w') as pocket_file:
+        prefix = pr_path+'/'+pr+'/flex_site/'+pr
+        with open(prefix+'_flexs_'+str(i)+'.txt', 'w') as flex_file, open(prefix+'_pocket_'+str(i)+'.pdb', 'w') as pocket_file:
             n=0
             for item in res:
                 flex_file.write(str(item[0])+'\t'+str(item[1][0])+'\t'+str(item[1][1])+'\t'+str(item[1][2])+'\t'+str(item[1][3]))
