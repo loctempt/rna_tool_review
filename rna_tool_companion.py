@@ -7,6 +7,7 @@ import math
 import util
 from config import Config
 
+
 def dist_cutoff_cal(micro_atom_list, macro_atom_list, cutoff):
     """
     计算micro_atom_list链条中，与macro_atom_list链条最小距离不大于cutoff的micro_atom总数
@@ -24,6 +25,7 @@ def dist_cutoff_cal(micro_atom_list, macro_atom_list, cutoff):
             break
     return atom_cnt
 
+
 def input_legalization(marked_words, legal_num, case_status):
     flag = True
     while flag is True:
@@ -32,28 +34,33 @@ def input_legalization(marked_words, legal_num, case_status):
             flag = False
     return tmp
 
-def call_perl_and_rename(rename_to,matchPath,script_path):
+
+def call_perl_and_rename(rename_to, matchPath, script_path):
     print('start running perl script...')
     os.chdir(matchPath)
-    print('call_perl:',os.getcwd())
+    print('call_perl:', os.getcwd())
     ret = subprocess.call(['perl', script_path+'/superimopose.pl'])
     if ret == 0:
-            os.rename(matchPath+'/align_tmp.pdb', matchPath+'/'+rename_to)
-            print('success')
+        os.rename(matchPath+'/align_tmp.pdb', matchPath+'/'+rename_to)
+        print('success')
     else:
         print('failed')
 
-def call_superimopose(pdb_id,data_pth):
-    pdb_list=os.listdir(data_pth+'/pre_dealing')
-    shutil.copyfile(data_pth+'/pre_dealing/'+pdb_id+'.pdb',data_pth+'/superimpose/template.pdb')
+
+def call_superimopose(pdb_id, data_pth):
+    pdb_list = os.listdir(data_pth+'/pre_dealing')
+    shutil.copyfile(data_pth+'/pre_dealing/'+pdb_id+'.pdb',
+                    data_pth+'/superimpose/template.pdb')
     for i in pdb_list:
-        shutil.copyfile(data_pth+'/pdb/'+i,data_pth+'/superimpose/align.pdb')
-        call_perl_and_rename(i,data_pth+'/superimpose',script_pth)  # FIXME script_pth未定义
+        shutil.copyfile(data_pth+'/pdb/'+i, data_pth+'/superimpose/align.pdb')
+        call_perl_and_rename(i, data_pth+'/superimpose',
+                             script_pth)  # FIXME script_pth未定义
         # TODO script path undefined
-        os.remove(data_pth+'/superimpose/align.pdb') 
+        os.remove(data_pth+'/superimpose/align.pdb')
     os.remove(data_pth+'/superimpose/template.pdb')
 
-def prepare_fasta(template_id, pdb:PDB, cluster_dir):
+
+def prepare_fasta(template_id, pdb: PDB, cluster_dir):
     """
     将pdb中的大分子转成fasta格式，写入缓存文件
     """
@@ -65,17 +72,22 @@ def prepare_fasta(template_id, pdb:PDB, cluster_dir):
             chain.pdb_2_fasta()
         out_file.write('\n'.join(chains))
 
-def get_chain_id_by_cluster(template_id , cluster_dir):
+
+def get_chain_id_by_cluster(template_id, cluster_dir):
     """
     从聚类结果中找到长度最接近receptor的模板链
     """
     cluster_file = os.path.join(cluster_dir, "firstRes.clsr")
-    cluster = util.get_cluster_by_id(cluster_file, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
-    length_of_receptor = util.length_of_chain(cluster, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
-    cluster = list(filter(lambda x: x[1] != util.ClsrReader.RECEPTOR_FLAG and x[1] == template_id, cluster))
-    cluster = sorted(cluster, key=lambda x:abs(x[0] - length_of_receptor))
+    cluster = util.get_cluster_by_id(
+        cluster_file, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
+    length_of_receptor = util.length_of_chain(
+        cluster, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
+    cluster = list(filter(
+        lambda x: x[1] != util.ClsrReader.RECEPTOR_FLAG and x[1] == template_id, cluster))
+    cluster = sorted(cluster, key=lambda x: abs(x[0] - length_of_receptor))
     chain_id = cluster[0][2]
     return chain_id
+
 
 def clustering_stage_a(template_id, file_dir, cluster_dir):
     """
@@ -83,7 +95,8 @@ def clustering_stage_a(template_id, file_dir, cluster_dir):
     """
     obabel_input = os.path.join(file_dir, "dude", "receptor.pdb")
     obabel_output = os.path.join(cluster_dir, "receptor.fasta")
-    obabel_cmd = "obabel -ipdb {} -ofasta -O {}".format(obabel_input, obabel_output)
+    obabel_cmd = "obabel -ipdb {} -ofasta -O {}".format(
+        obabel_input, obabel_output)
     os.system(obabel_cmd)
 
     cat_input = obabel_output
@@ -94,6 +107,7 @@ def clustering_stage_a(template_id, file_dir, cluster_dir):
     cdhit_output = os.path.join(cluster_dir, "firstRes")
     os.system("cdhit -i {} -o {} -c 0.70 -n 5".format(cdhit_input, cdhit_output))
 
+
 def clustering_stage_b(cluster_dir):
     """
     正式聚类过程
@@ -101,6 +115,7 @@ def clustering_stage_b(cluster_dir):
     cdhit_input = os.path.join(cluster_dir, "fasta.txt")
     cdhit_output = os.path.join(cluster_dir, "secondRes")
     os.system("cdhit -i {} -o {} -c 0.70 -n 5".format(cdhit_input, cdhit_output))
+
 
 def cluster_sanitize(template_id, chain_id, cluster_dir):
     """
@@ -111,6 +126,7 @@ def cluster_sanitize(template_id, chain_id, cluster_dir):
     length_of_template = util.length_of_chain(cluster, template_id, chain_id)
     cluster = list(filter(lambda x: x[0] >= 0.5 * length_of_template, cluster))
     return cluster
+
 
 def clustering(template_id, file_dir):
     """
@@ -136,10 +152,13 @@ def clustering(template_id, file_dir):
     sanitized_cluster = cluster_sanitize(template_id, chain_id, cluster_dir)
     return chain_id, sanitized_cluster
 
+
 target_dict = util.read_targets(Config.TARGETS_FILE_PATH)
+
 
 def get_template_id(protein_name):
     return target_dict[protein_name]
+
 
 # dirPath = input("输入当前这一类蛋白（如激酶）的目录:")
 dirPath = Config.DIR_PATH
@@ -151,12 +170,12 @@ for pr_class_name in dirList:
     if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
         continue
 
-    fileList = os.listdir(os.path.join(filePath,'data'))
+    fileList = os.listdir(os.path.join(filePath, 'data'))
     PDB_dict = {}
 
     for file in fileList:
         print(file)
-        with open(os.path.join(filePath,'data',file), 'r') as cur_file:
+        with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
             for aa in cur_PDB.macro_molecule.get_complete_aa():
@@ -202,7 +221,6 @@ for pr_class_name in dirList:
     # clsrNum = input("plz input "+pr_class_name+" template class ID:")
     templateID = get_template_id(pr_class_name)
     template_chain_id, cluster = clustering(templateID, filePath)
-    
 
     # with open(os.path.join(filePath,'序列聚类','outRes.clstr'), 'r') as clsrFile:
     #     clsrnum_found = False
@@ -280,7 +298,7 @@ for pr_class_name in dirList:
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
         micro_chain = value[1] if len(value) == 2 else None
-        with open(os.path.join(filePath,'pre_dealing',key+'.pdb'), 'w') as outFile:
+        with open(os.path.join(filePath, 'pre_dealing', key+'.pdb'), 'w') as outFile:
             outFile.writelines(str(macro_chain))
             outFile.write('\nTER\n')
             if len(value) > 1:
@@ -288,7 +306,7 @@ for pr_class_name in dirList:
 
     # superimpose
     # print('下一步：蛋白叠合，请移至服务器完成')
-    call_superimopose(templateID,dirPath+'/'+pr_class_name)
+    call_superimopose(templateID, dirPath+'/'+pr_class_name)
     os.system('pause')
 
     # =========================
@@ -379,7 +397,7 @@ for pr_class_name in dirList:
     #             # else:
     #             specified_sele_pkt_dict[str(
     #                 rgh_file[:5])] = cur_PDB.macro_molecule.get_chain(rgh_file[4])
-                    
+
     # pkt_resSeq = set()
     # for key, value in specified_sele_pkt_dict.items():
     #     for macro_aa in value.get_complete_aa():
