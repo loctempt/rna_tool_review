@@ -66,6 +66,9 @@ def call_superimopose(pdb_id, data_pth):
         align_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'align.pdb')
         shutil.copyfile(align_src, align_dest)
         call_perl_and_rename(i)
+        result_src = os.path.join(Config.SUPERIMPOSE_PATH, i)
+        result_dest = os.path.join(data_pth, 'superimpose', i)
+        shutil.move(result_src, result_dest)
         os.remove(align_dest)
     os.remove(template_dest)
 
@@ -188,7 +191,7 @@ for pr_class_name in dirList:
 
     #将templateID+chainid写入文件 
     with open(dirPath+'/class_templateID.txt','w+') as cluster_file:
-        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id+'\n')
+        cluster_file.write(pr_class_name+'  '+templateID.upper()+template_chain_id+'\n')
 
     rough_sele_pr_dict = {}
     for file_name in fileList:
