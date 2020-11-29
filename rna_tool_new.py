@@ -31,10 +31,7 @@ class Atom:
         return str(self.atom_line[12:16])
 
     def get_altLoc(self) -> bool:
-        if self.atom_line[16] != ' ':
-            return True, str(self.atom_line[16])
-        else:
-            return False, str(self.atom_line[16])
+        return self.atom_line[16]
 
     def get_resName(self) -> str:
         return str(self.atom_line[17:20])
@@ -59,7 +56,7 @@ class Atom:
 
     def get_temprature_factor(self) -> float:
         return float(self.atom_line[60:66])
-    
+
     def atom_dist_2(self, another) -> float:
         return (self.get_x() - another.get_x()) ** 2 +\
             (self.get_y() - another.get_y()) ** 2 +\
@@ -71,7 +68,7 @@ class Atom:
     def set_resSeq(self, new_resSeq):
         self.atom_line = self.atom_line[:22] + \
             str(new_resSeq).rjust(4, ' ') + self.atom_line[26:]
-    
+
 
 class AAcid:
     '''
@@ -96,10 +93,10 @@ class AAcid:
 
     def get_molecule_resSeq(self):
         return self.atom_list[0].get_resSeq()
-    
+
     def get_molecule_len(self):
         return len(self.atom_list)
-    
+
     def min_dist_cal(self, another) -> float:
         '''
         参数：两个分子对象，计算距离
@@ -115,7 +112,7 @@ class AAcid:
                 if cur_dist < min_dist:
                     min_dist = cur_dist
         return min_dist
-        
+
     def rmsd_cal(self, template) -> list:
         '''
         计算氨基酸rmsd，按照pdb记录顺序返回各原子rmsd值
@@ -123,35 +120,35 @@ class AAcid:
         '''
         aminoacid_rmsd = 0.0
         rmsd_atom_list = []
-        sidechain_list=[]
-        backbone_list=[]
+        sidechain_list = []
+        backbone_list = []
         for i in range(len(self.atom_list)):
             if not self.atom_list[i].element_compare('H'):
                 continue
             cur_val = self.atom_list[i].atom_dist_2(template.atom_list[i])
-            if self.atom_list[i].get_name() in ['C','N','CA','O']:
+            if self.atom_list[i].get_name() in ['C', 'N', 'CA', 'O']:
                 backbone_list.append(math.sqrt(cur_val))
             else:
                 sidechain_list.append(math.sqrt(cur_val))
             rmsd_atom_list.append(math.sqrt(cur_val))
             aminoacid_rmsd += cur_val
 
-        return math.sqrt(aminoacid_rmsd/len(self.atom_list)), rmsd_atom_list,sidechain_list,backbone_list
+        return math.sqrt(aminoacid_rmsd/len(self.atom_list)), rmsd_atom_list, sidechain_list, backbone_list
 
     def monomer_identify(self):
         cur_list = []
         standard_alt = None
         # 标志位 standard_alt为空时 是false
         for atom in self.atom_list:
+            # 记录standard_alt为空的元素
             if atom.get_altLoc() == ' ':
                 cur_list.append(atom)
-            if standard_alt is None:
+            if standard_alt is None and atom.get_altLoc() != ' ':
                 standard_alt = atom.get_altLoc()
                 cur_list.append(atom)
             # 若出现第一个标号不为空的：
-            else:
-                if atom.get_altLoc() == standard_alt:
-                    cur_list.append(atom)
+            elif atom.get_altLoc() == standard_alt:
+                cur_list.append(atom)
 
         if len(cur_list) != len(self.atom_list):
             self.atom_list = cur_list
@@ -175,7 +172,7 @@ class Chain:
 
     def __init__(self, molecule: list):
         self.aa_List = []
-        self.aa_fasta_list=[]
+        self.aa_fasta_list = []
         one_aa = []
         cur_resseq = molecule[0][22:26]
         self.chainID = molecule[0][21]
@@ -192,15 +189,16 @@ class Chain:
         # 将最后一个分子转换成氨基酸类
         if len(one_aa) > 0:
             self.aa_List.append(AAcid(one_aa))
+
     def get_chainID(self):
         return self.chainID
-    
+
     def __str__(self):
         return '\n'.join(list(map(lambda aa: str(aa), self.aa_List)))
-    
-    def get_complete_aa_by_resSeq(self,resSeq):
+
+    def get_complete_aa_by_resSeq(self, resSeq):
         for aa in self.aa_List:
-            if aa.get_molecule_resSeq()==resSeq:
+            if aa.get_molecule_resSeq() == resSeq:
                 return aa
         return None
 
@@ -214,27 +212,43 @@ class Chain:
         return ret
 
     def pdb_2_fasta(self):
-        # pdb链转换为fasta
+        """
+        pdb链转换为fasta
+        """
+        if len(self.aa_fasta_list) == len(self.aa_List):
+            return
         aa_codes = {
-            'ALA': 'A', 'CYS': 'C', 'SEP': 'B', 'ASP': 'D', 'GLU': 'E',
-            'PHE': 'F', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I', 'PTR': 'J',
-            'LYS': 'K', 'LEU': 'L', 'MET': 'M', 'ASN': 'N', 'TPO': 'O',
-            'PRO': 'P', 'GLN': 'Q', 'ARG': 'R', 'SER': 'S','THR': 'T', 
-            'VAL': 'V', 'TYR': 'Y', 'TRP': 'W'
+        'ALA': 'A', 'CYS': 'C', 'ASP': 'D', 'GLU': 'E','PHE': 'F', 'GLY': 'G', 'HIS': 'H', 'ILE': 'I',
+        'LYS': 'K', 'LEU': 'L', 'MET': 'M', 'ASN': 'N','PRO': 'P', 'GLN': 'Q', 'ARG': 'R', 'SER': 'S',
+        'VAL': 'V', 'TYR': 'Y', 'TRP': 'W', 'THR': 'T','2AS': 'D', '3AH': 'H', '5HP': 'E', 'ACL': 'R', 
+        'AIB': 'A', 'ALM': 'A', 'ALO': 'T', 'ALY': 'K','ARM': 'R', 'ASA': 'D', 'ASB': 'D', 'ASK': 'D',
+        'ASL': 'D', 'ASQ': 'D', 'AYA': 'A', 'BCS': 'C','BHD': 'D', 'BMT': 'T', 'BNN': 'A', 'BUC': 'C', 
+        'BUG': 'L', 'C5C': 'C', 'C6C': 'C', 'CCS': 'C','CEA': 'C', 'CHG': 'A', 'CLE': 'L', 'CME': 'C',
+        'CSD': 'A', 'CSO': 'C', 'CSP': 'C', 'CSS': 'C','CSW': 'C', 'CXM': 'M', 'CY1': 'C', 'CY3': 'C', 
+        'CYG': 'C', 'CYM': 'C', 'CYQ': 'C', 'DAH': 'F','DAL': 'A', 'DAR': 'R', 'DAS': 'D', 'DCY': 'C', 
+        'DGL': 'E', 'DGN': 'Q', 'DHA': 'A', 'DHI': 'H','DIL': 'I', 'DIV': 'V', 'DLE': 'L', 'DLY': 'K', 
+        'DNP': 'A', 'DPN': 'F', 'DPR': 'P', 'DSN': 'S','DSP': 'D', 'DTH': 'T', 'DTR': 'W', 'DTY': 'Y', 
+        'DVA': 'V', 'EFC': 'C', 'FLA': 'A', 'FME': 'M','GGL': 'E', 'GLZ': 'G', 'GMA': 'E', 'GSC': 'G',
+        'HAC': 'A', 'HAR': 'R', 'HIC': 'H', 'HIP': 'H','HMR': 'R', 'HPQ': 'F', 'HTR': 'W', 'HYP': 'P', 
+        'IIL': 'I', 'IYR': 'Y', 'KCX': 'K', 'LLP': 'K','LLY': 'K', 'LTR': 'W', 'LYM': 'K', 'LYZ': 'K',
+        'MAA': 'A', 'MEN': 'N', 'MHS': 'H', 'MIS': 'S','MLE': 'L', 'MPQ': 'G', 'MSA': 'G', 'MSE': 'M', 
+        'MVA': 'V', 'NEM': 'H', 'NEP': 'H', 'NLE': 'L','NLN': 'L', 'NLP': 'L', 'NMC': 'G', 'OAS': 'S', 
+        'OCS': 'C', 'OMT': 'M', 'PAQ': 'Y', 'PCA': 'E','PEC': 'C', 'PHI': 'F', 'PHL': 'F', 'PR3': 'C',
+        'PRR': 'A', 'PTR': 'Y', 'SAC': 'S', 'SAR': 'G','SCH': 'C', 'SCS': 'C', 'SCY': 'C', 'SEL': 'S', 
+        'SEP': 'S', 'SET': 'S', 'SHC': 'C', 'SHR': 'K','SOC': 'C', 'STY': 'Y', 'SVA': 'S', 'TIH': 'A', 
+        'TPL': 'W', 'TPO': 'T', 'TPQ': 'A', 'TRG': 'K','TRO': 'W', 'TYB': 'Y', 'TYQ': 'Y', 'TYS': 'Y', 
+        'TYY': 'Y', 'AGM': 'R', 'GL3': 'G', 'SMC': 'C', 'ASX': 'B', 'CGU': 'E', 'CSX': 'C', 'GLX': 'Z'
         }
         for cur_aa in self.aa_List:
-            if cur_aa.atom_list[0].get_atom()=='HETATM':
-                self.aa_fasta_list.append('X')
-            else:
-                if len(self.aa_fasta_list)==len(self.aa_List):
-                    return
-                self.aa_fasta_list.append(aa_codes[cur_aa.get_molecule_resName()])
+                self.aa_fasta_list.append(
+                    aa_codes[cur_aa.get_molecule_resName()])
 
     def sequence_match(self, another):
         '''
         self：比对链 another：模板链
         needlman wunsch
         '''
+        # TODO: 待查，双人查
         p = 1
         q = 1
         # 初始化 列：mthseq 行：tpseq
@@ -334,36 +348,40 @@ class Chain:
                 tpList.append(tpltIdx)
                 tpltIdx += 1
 
-        firstIdx = 0
-        while firstIdx < len(mth):
-            if mth[firstIdx] == tp[firstIdx]:
+        # 找到第一个两两配对的位置
+        first_pairing_position = 0
+        while first_pairing_position < len(mth):
+            if mth[first_pairing_position] == tp[first_pairing_position]:
                 break
-            firstIdx += 1
+            first_pairing_position += 1
 
-        for forwardPointer in range(firstIdx, len(mth)):
+        for forwardPointer in range(first_pairing_position, len(mth)):
             mthList.append(tpList[forwardPointer])
-        for backwardPointer in range(firstIdx-1, -1, -1):
-            mthList.insert(0, backwardPointer-firstIdx+tpList[firstIdx])
+        for backwardPointer in range(first_pairing_position-1, -1, -1):
+            mthList.insert(
+                0, backwardPointer-first_pairing_position+tpList[first_pairing_position])
 
         # 更新chain中各氨基酸的resseq
-        amino_acid_cnt=0
+        amino_acid_cnt = 0
         for i in range(len(mthList)):
-            if mth[i]=='-':
+            if mth[i] == '-':
                 continue
             self.aa_List[amino_acid_cnt].set_resSeq(mthList[i])
-            amino_acid_cnt+=1
+            amino_acid_cnt += 1
 
         return mthList
 
-    def mutation_cal(self,tp,mth,mthList):
-        mut_list=[]
-        print('mth:',len(mth),'tp:',len(tp),'mthList:',len(mthList))
+    def mutation_cal(self, tp, mth, mthList):
+        mut_list = []
+        print('mth:', len(mth), 'tp:', len(tp), 'mthList:', len(mthList))
+        # CHECK len(tp) <= len(mth) ?
         for i in range(len(mth)):
-            if mth[i]=='-' or tp[i]=='-':
+            if mth[i] == '-' or tp[i] == '-':
                 continue
-            if mth[i]!=tp[i]:
+            if mth[i] != tp[i]:
                 mut_list.append(tp[i]+' '+mth[i]+' '+str(mthList[i])+'\n')
         return mut_list
+
 
 class Molecule:
     """
@@ -424,11 +442,12 @@ class MicroMolecule(Molecule):
     '''
     继承分子类 是活性小分子
     '''
+
     def __init__(self, tmp_chains: list):
         # 由于pdb传进来的数据没有按照链区分开 在调用super方法之前 需要添加这部分代码
         # print('micro mol tmpChain[0][21]:',tmp_chains[0][21])
         # print('micro mol tmpChain[0]:',tmp_chains[0])
-        
+
         cur_chainID = tmp_chains[0][21]
         one_chain = []
         chains = []
@@ -456,12 +475,12 @@ class PDB:
         tmp_molecules = []
         tmp_molecule = []
         status_flag = False
-        self.micro_molecule=None
+        self.micro_molecule = None
         for line in lines:
             if len(line) == 0:
                 continue
             line = line.strip()
-            category =line[0:6].strip()
+            category = line[0:6].strip()
             if not status_flag:
                 if category not in ['ATOM', 'HETATM']:
                     continue
@@ -469,42 +488,43 @@ class PDB:
                     tmp_molecule.append(line)
                     status_flag = True
             else:
-                if category not in ['ATOM', 'HETATM', 'TER','ANISOU']:
-                    if tmp_molecule!=[]:
+                if category not in ['ATOM', 'HETATM', 'TER', 'ANISOU']:
+                    if tmp_molecule != []:
                         tmp_molecules.append(tmp_molecule)
-                        tmp_molecule=[]
+                        tmp_molecule = []
                     break
                 if category == 'TER':
                     tmp_molecules.append(tmp_molecule)
                     tmp_molecule = []
-                elif category=='ANISOU':
+                elif category == 'ANISOU':
                     continue
                 else:
                     tmp_molecule.append(line)
-        
+
         if tmp_molecule != []:
             tmp_molecules.append(tmp_molecule)
-        flag=False
+        flag = False
         # print(tmp_molecules[-1][0][0])
         for mol in tmp_molecules[-1]:
-            if mol[0][0]=='A':
-                flag=True
+            if mol[0][0] == 'A':
+                flag = True
                 break
         if flag:
-            self.macro_molecule=MacroMolecule(tmp_molecules)
+            self.macro_molecule = MacroMolecule(tmp_molecules)
             # print('has macro_molecule')
         else:
             # print('has micro_molecule,macro_molecule')
             # print(tmp_molecules)
-            if len(tmp_molecules)==2:
-                self.macro_molecule=MacroMolecule([tmp_molecules[0]])
-                self.micro_molecule=MicroMolecule(tmp_molecules[1])
+            if len(tmp_molecules) == 2:
+                self.macro_molecule = MacroMolecule([tmp_molecules[0]])
+                self.micro_molecule = MicroMolecule(tmp_molecules[1])
             else:
                 macro_mol = []
                 for i in range(len(tmp_molecules)-1):
                     macro_mol.append(tmp_molecules[i])
                 self.macro_molecule = MacroMolecule(macro_mol)
                 self.micro_molecule = MicroMolecule(tmp_molecules[-1])
+
     def __str__(self):
         return '\n'.join(list(map(
             lambda mol: str(mol),
@@ -512,16 +532,17 @@ class PDB:
         )))
 
     def molecule_cat(self, id: str):
-        if self.micro_molecule!=None and self.micro_molecule.get_chain(id)!=None:
+        if self.micro_molecule != None and self.micro_molecule.get_chain(id) != None:
             # print(str(self.micro_molecule.get_chain(id)))
             return (self.macro_molecule.get_chain(id), self.micro_molecule.get_chain(id))
         else:
-            return (self.macro_molecule.get_chain(id),None)
-    
+            return (self.macro_molecule.get_chain(id), None)
+
     def get_micro_molecule(self):
-        if self.micro_molecule!=None:
+        if self.micro_molecule != None:
             return self.micro_molecule
         else:
             return None
+
     def get_macro_molecule(self):
         return self.macro_molecule
