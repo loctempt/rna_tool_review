@@ -55,11 +55,11 @@ def call_superimopose(pdb_id, data_pth):
     将pdb文件复制到Config.SUPERIMPOSE_PATH下，调用Chimera叠合
     """
     pdb_list = os.listdir(data_pth+'/pre_dealing')
-    template_src = os.path.join(data_pth, 'pre_dealing', pdb_id+'.pdb')
+    template_src = os.path.join(data_pth, 'pre_dealing', pdb_id.upper()+'.pdb')
     template_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'template.pdb')
     shutil.copyfile(template_src, template_dest)
     for i in pdb_list:
-        align_src = os.path.join(data_pth, 'pdb', i)
+        align_src = os.path.join(data_pth, 'pre_dealing', i)
         align_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'align.pdb')
         shutil.copyfile(align_src, align_dest)
         call_perl_and_rename(i)
@@ -176,7 +176,8 @@ for pr_class_name in dirList:
     filePath = os.path.join(dirPath, pr_class_name)
     # if not os.path.isdir(filePath) or pr_class_name not in ['braf']:
     #     continue
-
+    if not os.path.isdir(filePath):
+        continue
     fileList = os.listdir(os.path.join(filePath, 'data'))
     # PDB_dict = {}
     templateID = get_template_id(pr_class_name)
@@ -202,7 +203,7 @@ for pr_class_name in dirList:
                     cur_chainid=cluster_i[2]        
                     break 
 
-        with open(os.path.join(filePath, 'data', file_name), 'r') as cur_file:
+        with open(os.path.join(filePath, 'data', file_name.lower()), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
             for aa in cur_PDB.macro_molecule.get_complete_aa():
