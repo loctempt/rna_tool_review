@@ -272,11 +272,11 @@ for pr_class_name in dirList:
     # =========================
     # 将小于0.55长度的链都删去
     # 并在剩余的rough_dict中筛选合适的小分子 距离小于5 60%
-    tmp_dict = {}
-    for key, value in rough_sele_pr_dict.items():
-        macro_chain = value[0]
-        micro_chain = value[1] # if len(value) == 2 else None
-        if float(len(macro_chain.get_complete_aa()))/maxchainlen > 0.5:
+    # tmp_dict = {}
+    # for key, value in rough_sele_pr_dict.items():
+    #     macro_chain = value[0]
+    #     micro_chain = value[1] # if len(value) == 2 else None
+    #     if float(len(macro_chain.get_complete_aa()))/maxchainlen > 0.5:
             # if len(value) == 1:
             #     tmp_dict[key] = value
             #     continue
