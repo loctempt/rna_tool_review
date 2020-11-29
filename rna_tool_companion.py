@@ -66,6 +66,9 @@ def call_superimopose(pdb_id, data_pth):
         align_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'align.pdb')
         shutil.copyfile(align_src, align_dest)
         call_perl_and_rename(i)
+        result_src = os.path.join(Config.SUPERIMPOSE_PATH, i)
+        result_dest = os.path.join(data_pth, 'superimpose', i)
+        shutil.move(result_src, result_dest)
         os.remove(align_dest)
     os.remove(template_dest)
 

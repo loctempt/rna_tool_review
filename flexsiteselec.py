@@ -111,14 +111,14 @@ for pr in pr_list:
     small_molecules,big_molecules={},{}
     temp=pr_dict[str(pr)]
     # temp=input('plz input '+pr +' template:')
-    peptide_list=os.listdir(pr_path+'\\'+pr+'\\superimpose')
-    if not os.path.isdir(pr_path+'\\'+pr+'\\ligand_test'):
-        os.mkdir(pr_path+'\\'+pr+'\\ligand_test')
+    peptide_list=os.listdir(pr_path+'/'+pr+'/superimpose')
+    if not os.path.isdir(pr_path+'/'+pr+'/ligand_test'):
+        os.mkdir(pr_path+'/'+pr+'/ligand_test')
     # os.mkdir(pr_path+'\\'+pr+'\\ligand_test\\'+pr)
     # random ligand selection
     lig_NO=0
     for peptide in peptide_list:
-        with open(pr_path+'\\'+pr+'\\superimpose\\'+peptide,'r') as input_file:
+        with open(pr_path+'/'+pr+'/superimpose/'+peptide,'r') as input_file:
             # deal big molecule
             cur_peptide=PDB(input_file.readlines())
             if str(peptide[0:5])==temp:
@@ -137,7 +137,7 @@ for pr in pr_list:
                 ctr_point=geo_ctr(small_molecule,'ctr')
                 small_molecules[str(lig_NO)]=[str(peptide[0:5])+'_'+str(ligand_count),small_molecule,ctr_point]
                 ligand_count+=1
-                with open(pr_path+'\\'+pr+'\\ligand_test\\'+str(lig_NO)+'.pdb','w') as target:
+                with open(pr_path+'/'+pr+'/ligand_test/'+str(lig_NO)+'.pdb','w') as target:
                     target.writelines(str(small_molecule))
                 lig_NO+=1
     
@@ -151,8 +151,8 @@ for pr in pr_list:
         n+=1                
         m=0
     
-    with open(pr_path+'\\'+pr+'\\ligand_test\\'+pr+'_detail.txt','w') as detail_f,\
-        open(pr_path+'\\'+pr+'\\ligand_test\\'+pr+'_dist.txt','w') as dist_f:
+    with open(pr_path+'/'+pr+'/ligand_test/'+pr+'_detail.txt','w') as detail_f,\
+        open(pr_path+'/'+pr+'/ligand_test/'+pr+'_dist.txt','w') as dist_f:
         detail_f.write('Lig_NO\tPDB NAME&lig_num\tctr_x\tctr_y\tctr_z\n')
         for i in range(lig_NO):
             detail_f.write(str(i)+'\t'+small_molecules[str(i)][0]+'\t'+str(small_molecules[str(i)][2][0])+'\t'+str(small_molecules[str(i)][2][1])+'\t'+str(small_molecules[str(i)][2][2])+'\n')
@@ -175,7 +175,7 @@ for pr in pr_list:
     
     class_list=sorted(class_list,key=lambda item: len(item),reverse=True)
     
-    with open(pr_path+'\\'+pr+'\\ligand_test\\'+pr+'_lig_class.txt','w') as lig_file:
+    with open(pr_path+'/'+pr+'/ligand_test/'+pr+'_lig_class.txt','w') as lig_file:
         for i in range(len(class_list)):
             lig_file.write('class'+str(i)+'\n')
             for j in range(len(class_list[i])):
@@ -269,7 +269,7 @@ for pr in pr_list:
             m+=1
         res = sorted(res.items(),key=lambda item:item[1][0],reverse=True)
         # output
-        with open(pr_path+'\\output\\'+pr+'_flexs_'+str(i)+'.txt','w') as flex_file ,open(pr_path+'\\output\\'+pr+'_pocket_'+str(i)+'.pdb','w') as pocket_file:
+        with open(pr_path+'/output/'+pr+'_flexs_'+str(i)+'.txt','w') as flex_file ,open(pr_path+'/output/'+pr+'_pocket_'+str(i)+'.pdb','w') as pocket_file:
             n=0
             for item in res:
                 flex_file.write(str(item[0])+'\t'+str(item[1][0])+'\t'+str(item[1][1])+'\t'+str(item[1][2])+'\t'+str(item[1][3]))
