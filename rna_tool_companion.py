@@ -77,7 +77,7 @@ def get_chain_id_by_cluster(template_id, cluster_dir):
     """
     从聚类结果中找到长度最接近receptor的模板链
     """
-    cluster_file = os.path.join(cluster_dir, "firstRes.clsr")
+    cluster_file = os.path.join(cluster_dir, "firstRes.clstr")
     cluster = util.get_cluster_by_id(
         cluster_file, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
     length_of_receptor = util.length_of_chain(
@@ -121,8 +121,9 @@ def cluster_sanitize(template_id, chain_id, cluster_dir):
     """
     去除长度小于模板链长度50%的短链
     """
-    cluster_file = os.path.join(cluster_dir, "secondRes.clsr")
+    cluster_file = os.path.join(cluster_dir, "secondRes.clstr")
     cluster = util.get_cluster_by_id(cluster_file, template_id, chain_id)
+    print(template_id, chain_id, cluster)
     length_of_template = util.length_of_chain(cluster, template_id, chain_id)
     cluster = list(filter(lambda x: x[0] >= 0.5 * length_of_template, cluster))
     return cluster
@@ -157,7 +158,7 @@ target_dict = util.read_targets(Config.TARGETS_FILE_PATH)
 
 
 def get_template_id(protein_name):
-    return target_dict[protein_name]
+    return target_dict[protein_name.upper()]
 
 
 # dirPath = input("输入当前这一类蛋白（如激酶）的目录:")
