@@ -54,6 +54,9 @@ def call_superimopose(pdb_id, data_pth):
     """
     将pdb文件复制到Config.SUPERIMPOSE_PATH下，调用Chimera叠合
     """
+    if not os.path.exists(Config.SUPERIMPOSE_PATH):
+        os.mkdir(Config.SUPERIMPOSE_PATH)
+        shutil.copyfile('superimopose.pl', Config.SUPERIMPOSE_PERL_SCRIPT_PATH)
     pdb_list = os.listdir(data_pth+'/pre_dealing')
     template_src = os.path.join(data_pth, 'pre_dealing', pdb_id.upper()+'.pdb')
     template_dest = os.path.join(Config.SUPERIMPOSE_PATH, 'template.pdb')
