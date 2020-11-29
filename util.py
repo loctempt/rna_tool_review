@@ -45,7 +45,7 @@ def length_of_chain(cluster: list, pdb_id, chain_id):
     返回给定肽链的长度（aa）
     """
     for item in cluster:
-        if item[1] == pdb_id and item[2] == chain_id:
+        if item[1] == pdb_id.upper() and item[2] == chain_id.upper():
             return item[0]
     else:
         return -1

@@ -123,7 +123,6 @@ def cluster_sanitize(template_id, chain_id, cluster_dir):
     """
     cluster_file = os.path.join(cluster_dir, "secondRes.clstr")
     cluster = util.get_cluster_by_id(cluster_file, template_id, chain_id)
-    print(template_id, chain_id, cluster)
     length_of_template = util.length_of_chain(cluster, template_id, chain_id)
     cluster = list(filter(lambda x: x[0] >= 0.5 * length_of_template, cluster))
     return cluster
