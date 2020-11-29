@@ -175,12 +175,16 @@ for pr_class_name in dirList:
     templateID = get_template_id(pr_class_name)
     template_chain_id, cluster = clustering(templateID, filePath)
 
+    #将templateID+chainid写入文件 
+    with open(dirPath+'/class_templateID.txt','w+') as cluster_file:
+        cluster_file.write(pr_class_name+'  '+templateID+template_chain_id)
+
     rough_sele_pr_dict = {}
     for file in fileList:
-        print(file)
-        #  TODO 将两个部分交换后 加判断 以确定file在不在列表中，
-        if file not in list:
+        print(file[0:4])
+        if file[0:4] not in cluster:
             continue
+
         with open(os.path.join(filePath, 'data', file), 'r') as cur_file:
             cur_PDB = PDB(cur_file.readlines())
             # 将大小分子删去单聚体多坐标体系
@@ -218,7 +222,7 @@ for pr_class_name in dirList:
                     # 而remove使下一个元素前移
                     # 引用不传递！！！！！
 
-            macro_chain, micro_chain = cur_PDB.molecule_cat(curChainID)
+            macro_chain, micro_chain = cur_PDB.molecule_cat(template_chain_id)
             if micro_chain is not None:
                 for rough_micro_mol in micro_chain.get_complete_aa():
                     one_Mol_total_cutoff = dist_cutoff_cal(
@@ -226,9 +230,9 @@ for pr_class_name in dirList:
                 if float(one_Mol_total_cutoff)/len(rough_micro_mol.get_complete_atom()) < 0.6:
                     micro_chain.aa_List.remove(rough_micro_mol)
                 rough_sele_pr_dict[str(
-                    curPdb+curChainID)] = [macro_chain, micro_chain]
+                    templateID+template_chain_id)] = [macro_chain, micro_chain]
             else:
-                rough_sele_pr_dict[str(curPdb+curChainID)] = [macro_chain]
+                rough_sele_pr_dict[str(templateID+template_chain_id)] = [macro_chain]
 
             # PDB_dict[str(file)[:4]] = cur_PDB
 
@@ -297,8 +301,8 @@ for pr_class_name in dirList:
     # =========================
     # 序列叠合编号 鉴定突变位点
     # =========================
-    # TODO template ID 是dude 模板蛋白 id
-    template_chain = rough_sele_pr_dict[templateID][0]
+    # template chain 是dude 模板蛋白 
+    template_chain = rough_sele_pr_dict[templateID+template_chain_id][0]
     template_chain.pdb_2_fasta()
     for key, value in rough_sele_pr_dict.items():
         macro_chain = value[0]
@@ -324,8 +328,8 @@ for pr_class_name in dirList:
 
     # superimpose
     # print('下一步：蛋白叠合，请移至服务器完成')
-    call_superimopose(templateID, dirPath+'/'+pr_class_name)
-    os.system('pause')
+    call_superimopose(templateID+template_chain_id, dirPath+'/'+pr_class_name)
+    # os.system('pause')
 
     # =========================
     # 计算口袋
