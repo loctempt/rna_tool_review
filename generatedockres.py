@@ -4,7 +4,8 @@ from matplotlib import pyplot as plt
 import matplotlib
 import numpy as np
 import math
-
+from config import Config
+import sys
 def cal_y(x,numlist,lig_num):
     y=np.arange(0,100,0.001)
     for i in range(len(x)):
@@ -17,13 +18,20 @@ def cal_y(x,numlist,lig_num):
             y[i]=(float(ligand_cnt)/lig_num)*100
     return y
 
-
-inputPath=r'C:\Users\lenovo\Desktop\biyesheji'
-protein_type,protein=map(str,input('please input protein type & name: \n').split())
+# TODO 取消input pr type pr name 由shell导入
+inputPath=Config.DIR_PATH
+# protein_type = $1
+# gpcr kinse
+protein_class = sys.argv
+# aa2ar 
+# protein_type,protein=map(str,input('please input protein type & name: \n').split())
+cur_pr_type =inputPath+'/'+protein_class+'/dock/output/'
+cur_dock_input=inputPath+'/'+protein_class+'/dock/input/'
+        
 workbook = openpyxl.Workbook()
 
 fig = plt.figure(num=1, figsize=(15, 8),dpi=80) 
-plt.title(protein+" Roc Curve") 
+plt.title(protein_class+" Roc Curve") 
 plt.xlabel("Decoy Founds%")
 plt.ylabel("Ligand Founds%")
 lig_cnt=0
@@ -31,39 +39,49 @@ lig_cnt=0
 # itero = 0
 for iter in ['flex','rigid']:   
     print(iter)
-    worksheet = workbook.create_sheet(protein+'_'+iter,0)
-    res_list = [] 
+    worksheet = workbook.create_sheet(protein_class+'_'+iter,0)
+    # res_dict = [] 
+    res_dict={}
     for jter in ['ligand','decoy']:
         print(jter)
-        molecule_list = os.listdir(inputPath+'\\'+protein_type+'\\'+protein+'\\dock\\output\\'+str(iter)+'\\'+str(jter))
-        if jter=='ligand':
-            lig_cnt=len(molecule_list)
+        molecule_list = os.listdir(cur_pr_type+str(iter)+'/'+str(jter))
+        # if jter=='ligand':
+        #     lig_cnt=len(molecule_list)
         for molecule in molecule_list:
             # print(molecule)
-            
-            if not os.path.isdir(inputPath+'\\'+protein_type+'\\'+protein+'\\dock\\output\\'+str(iter)+'\\'+str(jter)+'\\'+str(molecule)):
-                continue
-            with open(inputPath+'\\'+protein_type+'\\'+protein+'\\dock\\output\\'+str(iter)+'\\'+str(jter)+'\\'+str(molecule)+'\\log.txt','r') as cur_file:
-                print(str(molecule))
-                dock_score = min([float(record.split()[1]) for record in cur_file.readlines()[25:-1]])
-                res_list.append([jter,molecule,dock_score])
 
-    res_list = sorted(res_list,key=(lambda x: x[2]))
+            # 对input小分子的分子id匹配
+            #  将res_record改为dict key=molecule id ()，value= ((jter),1(molecule id),dock_score)
+            if not os.path.isdir(cur_pr_type+str(iter)+'/'+str(jter)+'/'+str(molecule)):
+                continue
+            with open(cur_pr_type+str(iter)+'/'+str(jter)+'/'+str(molecule)+'/log.txt','r') as cur_file,open(cur_dock_input+str(jter)+'/'+str(molecule)+'.pdbqt','r') as input_dock:
+                print(str(molecule))
+                ligand_id = input_dock.readlines()[0].split()[3]   
+                dock_score = min([float(record.split()[1]) for record in cur_file.readlines()[25:-1]])
+                print('小分子 数据库内id: ',ligand_id)
+                if ligand_id not in res_dict.keys() or ligand_id in res_dict.keys() and dock_score <= res_dict[ligand_id][2]:
+                    res_dict[ligand_id] = (jter,molecule,dock_score)
+                    if jter == 'ligand':
+                        lig_cnt += 1
+                    
+
+    res_dict = sorted(res_dict,key=(lambda x: x[2]))
     x = np.arange(0,100,0.001) 
-    y = cal_y(x,[rec[0] for rec in res_list],lig_cnt)
+    y = cal_y(x,[rec[0] for rec in res_dict],lig_cnt)
     plt.plot(x,y,label=iter) 
 
     cnt=1
-    for res_record in res_list:
-        worksheet.cell(cnt,1).value=res_record[0]
-        worksheet.cell(cnt,2).value=res_record[1]
-        worksheet.cell(cnt,3).value=res_record[2]
+    for key,res_record in res_dict.items():
+        worksheet.cell(cnt,1).value=str(key)
+        worksheet.cell(cnt,2).value=str(res_record[0])
+        worksheet.cell(cnt,3).value=str(res_record[1])
+        worksheet.cell(cnt,4).value=float(res_record[2])
         cnt+=1
 
-workbook.save(inputPath+'\\'+protein_type+'\\'+protein+'\\dock\\output\\'+protein+'.xlsx')
+workbook.save(cur_pr_type+protein_class+'.xlsx')
 plt.legend()
-plt.show()
-
+# plt.show()
+plt.savefig(cur_pr_type+protein_class+'.fig')
 
 
 
@@ -81,7 +99,7 @@ plt.show()
 
 # for decoy in decoyList:
 #     decoy=decoy.split('.')
-#     with open(decoyresultfilePath+'\\'+decoy[0]+'.'+decoy[1],'r') as decoyresFile,open(decoyMolsPath+'\\'+decoy[0]+'.mol2','r')as decoymol2File:
+#     with open(decoyresultfilePath+'/'+decoy[0]+'.'+decoy[1],'r') as decoyresFile,open(decoyMolsPath+'/'+decoy[0]+'.mol2','r')as decoymol2File:
 #         templist=[]
 #         for line in decoyresFile.readlines():
 #             line=line.split()
@@ -102,7 +120,7 @@ plt.show()
 
 # for ligand in ligandList:
 #     ligand=ligand.split('.')
-#     with open(ligandresultfilePath+'\\'+ligand[0]+'.result','r') as ligandresFile,open(ligandMolsPath+'\\'+ligand[0]+'.mol2','r') as ligandmol2File:
+#     with open(ligandresultfilePath+'/'+ligand[0]+'.result','r') as ligandresFile,open(ligandMolsPath+'/'+ligand[0]+'.mol2','r') as ligandmol2File:
 #         templist=[]
 #         for line in ligandresFile.readlines():
 #             line=line.split()
@@ -133,6 +151,6 @@ plt.show()
 #     worksheet.cell(cnt,3).value=tempdict[key][1]
 #     worksheet.cell(cnt,4).value=tempdict[key][2]
 #     cnt+=1
-# workbook.save(outPath+'\\akt1_rigid.xlsx')
+# workbook.save(outPath+'/akt1_rigid.xlsx')
 
 
