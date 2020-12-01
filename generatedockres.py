@@ -1,11 +1,13 @@
 import os
 import openpyxl.writer.excel
-from matplotlib import pyplot as plt 
-import matplotlib
 import numpy as np
 import math
 from config import Config
 import sys
+import matplotlib as mpl
+mpl.use('Agg')
+
+from matplotlib import pyplot as plt 
 
 def cal_y(x,numlist,lig_num):
     y=np.arange(0,100,0.001)
@@ -23,7 +25,7 @@ def cal_y(x,numlist,lig_num):
 inputPath=Config.DIR_PATH
 # protein_type = $1
 # gpcr kinse
-protein_class = sys.argv
+protein_class = sys.argv[1]
 # aa2ar 
 # protein_type,protein=map(str,input('please input protein type & name: \n').split())
 cur_pr_type =inputPath+'/'+protein_class+'/dock/output/'
@@ -56,33 +58,35 @@ for iter in ['flex','rigid']:
             if not os.path.isdir(cur_pr_type+str(iter)+'/'+str(jter)+'/'+str(molecule)):
                 continue
             with open(cur_pr_type+str(iter)+'/'+str(jter)+'/'+str(molecule)+'/log.txt','r') as cur_file,open(cur_dock_input+str(jter)+'/'+str(molecule)+'.pdbqt','r') as input_dock:
-                print(str(molecule))
+                print(iter,' ',jter,' ',str(molecule))
                 ligand_id = input_dock.readlines()[0].split()[3]   
-                dock_score = min([float(record.split()[1]) for record in cur_file.readlines()[25:-1]])
-                print('小分子 数据库内id: ',ligand_id)
+                dock_score = min([float(record.split()[1]) for record in cur_file.readlines()[24:-1]])
+		#print('小分子 数据库内id: ',ligand_id)
                 if ligand_id not in res_dict.keys() or ligand_id in res_dict.keys() and dock_score <= res_dict[ligand_id][2]:
                     res_dict[ligand_id] = (jter,molecule,dock_score)
                     if jter == 'ligand':
                         lig_cnt += 1
                     
-
-    res_dict = sorted(res_dict,key=(lambda x: x[2]))
+ #   print(res_dict)
+    res_dict = sorted(res_dict.items(),key=(lambda x: x[1][2]))
+   # print(res_dict)
     x = np.arange(0,100,0.001) 
-    y = cal_y(x,[rec[0] for rec in res_dict],lig_cnt)
+    y = cal_y(x,[rec[1][0] for rec in res_dict],lig_cnt)
     plt.plot(x,y,label=iter) 
 
     cnt=1
-    for key,res_record in res_dict.items():
-        worksheet.cell(cnt,1).value=str(key)
-        worksheet.cell(cnt,2).value=str(res_record[0])
-        worksheet.cell(cnt,3).value=str(res_record[1])
-        worksheet.cell(cnt,4).value=float(res_record[2])
+    for res_record in res_dict:
+        worksheet.cell(cnt,1).value=str(res_record[0])
+        print(str(res_record[0]),str(res_record[1][0]),str(res_record[1][1]),str(res_record[1][2]))
+        worksheet.cell(cnt,2).value=str(res_record[1][0])
+        worksheet.cell(cnt,3).value=str(res_record[1][1])
+        worksheet.cell(cnt,4).value=float(res_record[1][2])
         cnt+=1
 
 workbook.save(cur_pr_type+protein_class+'.xlsx')
 plt.legend()
 # plt.show()
-plt.savefig(cur_pr_type+protein_class+'.fig')
+plt.savefig(cur_pr_type+protein_class+'.svg')
 
 
 
