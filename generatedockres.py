@@ -6,6 +6,7 @@ import numpy as np
 import math
 from config import Config
 import sys
+
 def cal_y(x,numlist,lig_num):
     y=np.arange(0,100,0.001)
     for i in range(len(x)):

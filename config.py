@@ -4,3 +4,4 @@ class Config:
     ROOT_PATH = "/absolute/path/to/project/root"
     SUPERIMPOSE_PATH = "/home/jxy/rna/test/superimpose"
     SUPERIMPOSE_PERL_SCRIPT_PATH = "/home/jxy/rna/test/superimpose/superimopose.pl"
+    SCRIPT_PATH='home/leicq/flexbenchmark/script'
