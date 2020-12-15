@@ -133,6 +133,10 @@ def clustering_stage_a(template_id, file_dir, cluster_dir):
     obabel_cmd = "obabel -ipdb {} -ofasta -O {}".format(
         obabel_input, obabel_output)
     os.system(obabel_cmd)
+    with open(obabel_output, "w+") as obabel_output_file:
+        lines = obabel_output_file.readlines()
+        lines[0] = '>'+'receptor'+':'+'A'+'|PDBID|CHAIN|SEQUENCE\n'
+        obabel_output_file.writelines(lines)
 
     cat_input = obabel_output
     cat_output = os.path.join(cluster_dir, template_id+".fasta")
