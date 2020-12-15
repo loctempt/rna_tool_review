@@ -5,6 +5,7 @@ import subprocess
 import math
 import math
 import util
+import re
 from config import Config
 
 
@@ -80,10 +81,17 @@ def prepare_fasta(template_id, pdb: PDB, cluster_dir):
     macro_molecule = pdb.get_macro_molecule()
     chains = macro_molecule.get_complete_chain()
     out_file = os.path.join(cluster_dir, template_id+".fasta")
-    with open(out_file, 'w'):
+    with open(out_file, 'w') as output_file:
         for chain in chains:
             chain.pdb_2_fasta()
-        out_file.write('\n'.join(chains))
+            output_file.write('>'+template_id.upper()+':'+chain.get_chainID()+'|PDBID|CHAIN|SEQUENCE\n')
+            row = len(chain.aa_fasta_list)//80
+            pre_idx = 0
+            for i in range(row):
+                output_file.write(''.join(chain.aa_fasta_list)[pre_idx:pre_idx+80]+'\n')
+                pre_idx = pre_idx + 80
+            if pre_idx < len(chain.aa_fasta_list):
+                output_file.write(''.join(chain.aa_fasta_list)[pre_idx:]+'\n')
 
 
 def get_chain_id_by_cluster(template_id, cluster_dir):
@@ -91,8 +99,22 @@ def get_chain_id_by_cluster(template_id, cluster_dir):
     从聚类结果中找到长度最接近receptor的模板链
     """
     cluster_file = os.path.join(cluster_dir, "firstRes.clstr")
+    cluster_cnt = util.count_clusters(cluster_file)
     cluster = util.get_cluster_by_id(
         cluster_file, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
+    if cluster is None:
+        return None
+
+    # 特殊情况： 
+    # 当聚类只有两类，并且receptor和template不在同一类时，取template所在
+    # 那一类的第一个chain_id作为返回值
+    if cluster_cnt == 2 and len(cluster) == 1:
+        cluster_of_template = util.get_cluster_by_id(
+            cluster_file, template_id, util.ClsrReader.CHAIN_ID_ANY)
+        chain_id = cluster_of_template[0][2]
+        return chain_id
+    
+    # 正常情况：
     length_of_receptor = util.length_of_chain(
         cluster, util.ClsrReader.RECEPTOR_FLAG, util.ClsrReader.RECEPTOR_FLAG)
     cluster = list(filter(
@@ -162,6 +184,8 @@ def clustering(template_id, file_dir):
         clustering_stage_a(template_id, file_dir, cluster_dir)
         chain_id = get_chain_id_by_cluster(template_id, cluster_dir)
     clustering_stage_b(cluster_dir)
+    if chain_id is None:
+        chain_id = input("\n==========================\nchain_id为空，请输入一个chain_id：")
     sanitized_cluster = cluster_sanitize(template_id, chain_id, cluster_dir)
     return chain_id, sanitized_cluster
 

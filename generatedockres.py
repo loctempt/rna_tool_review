@@ -10,13 +10,15 @@ mpl.use('Agg')
 from matplotlib import pyplot as plt 
 
 def cal_y(x,numlist,lig_num):
+    print('lig_num:{}\treal_lig_num:{}'.format(lig_num, len(list(filter(lambda x: x=='ligand', numlist)))))
     y=np.arange(0,100,0.001)
     for i in range(len(x)):
         sub_arr = numlist[:int(x[i] / 100 * len(numlist))]
-        ligand_cnt=0
-        for j in sub_arr:
-            if j=='ligand':
-                ligand_cnt+=1
+        filtered = list(filter(lambda x: x == 'ligand', sub_arr))
+        ligand_cnt = len(filtered)
+        # for j in sub_arr:
+        #     if j=='ligand':
+        #         ligand_cnt+=1
         if len(sub_arr)!=0:
             y[i]=(float(ligand_cnt)/lig_num)*100
     return y

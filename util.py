@@ -43,8 +43,12 @@ def is_single_chain(pdb: PDB):
 def length_of_chain(cluster: list, pdb_id, chain_id):
     """
     返回给定肽链的长度（aa）
+    若给定肽链不存在，返回-1
+    pdb_id, chain_id同时传入ClsrReader.RECEPTOR_FLAG，就是找receptor
     """
     for item in cluster:
+        if chain_id == ClsrReader.CHAIN_ID_ANY and item[1] == pdb_id.upper():
+            return item[0]
         if item[1] == pdb_id.upper() and item[2] == chain_id.upper():
             return item[0]
     else:
@@ -54,19 +58,36 @@ def length_of_chain(cluster: list, pdb_id, chain_id):
 def get_cluster_by_id(cluster_file, pdb_id, chain_id):
     """
     从clusters中取出包含pdb_id和chain_id的cluster
+    pdb_id, chain_id同时传入ClsrReader.RECEPTOR_FLAG，就是找receptor
     """
     with ClsrReader(cluster_file) as clsr_reader:
         while True:
             cluster = clsr_reader.next_cluster()
             if cluster is None:
                 return None
-            length_of_receptor = length_of_chain(cluster, pdb_id.upper(), chain_id.upper())
+            length_of_receptor = length_of_chain(
+                cluster, pdb_id.upper(), chain_id.upper())
             if length_of_receptor > -1:
                 return cluster
 
 
+def count_clusters(cluster_file):
+    """
+    统计cluster_file中包含的cluster数量
+    """
+    cnt = 0
+    with ClsrReader(cluster_file) as clsr_reader:
+        while True:
+            cluster = clsr_reader.next_cluster()
+            if cluster is None:
+                break
+            cnt += 1
+    return cnt
+
+
 class ClsrReader:
     RECEPTOR_FLAG = "receptor"
+    CHAIN_ID_ANY = "any_chain"
 
     def __init__(self, clsr_file):
         self.clsr_file = open(clsr_file, 'r')
@@ -77,14 +98,14 @@ class ClsrReader:
     def __exit__(self, exc_type, exc_value, traceback):
         self.clsr_file.close()
 
-    def _parse_cluster(self, revert = 0):
+    def _parse_cluster(self, revert=0):
         """
         将聚类得到的类别信息转换为list
         """
         # Once a parsing progress is done, the next ">Cluster" line
         # is skipped by finding the ending point of current cluster,
         # and the next "1 100aa, >6PS2:A..." line is skipped by caller
-        # while checking EOF sign. So, whenever a line containing 
+        # while checking EOF sign. So, whenever a line containing
         # chain data is skipped, we need to revert the file pointer
         # to retain this line.
         file_pos = self.clsr_file.tell()
